@@ -92,13 +92,11 @@ int BoardReaderMIMOSIS::test() {
     
     MIS1__TBtRunCnfRec* VPtRunConf = NULL; // Pointer to run conf record
     MIS1__TBtAcqRawRec* VPtAcq     = NULL; // Pointer to current Acq
-      
-    
-  
+
     
     printf ( "\n" );
     printf ( "**********************************************************\n" );
-    printf ( "Beginning of Mimosis 1 data run files access toto library demo \n" );
+    printf ( "Beginning of Mimosis 1 data run files access library demo \n" );
     printf ( "**********************************************************\n" );
     printf ( "\n" );
   

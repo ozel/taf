@@ -98,7 +98,7 @@ int BoardReaderMIMOSIS::test() {
     
     printf ( "\n" );
     printf ( "**********************************************************\n" );
-    printf ( "Beginning of Mimossi 1 data run files access toto library demo \n" );
+    printf ( "Beginning of Mimosis 1 data run files access toto library demo \n" );
     printf ( "**********************************************************\n" );
     printf ( "\n" );
   

@@ -9,8 +9,6 @@
 //
 // created JB, 2021/04/21
 // Last Modified:
-// ZE 2021/05/226
-
 #define AP 0
 
 #include "BoardReaderMIMOSIS.h"
@@ -92,11 +90,13 @@ int BoardReaderMIMOSIS::test() {
     
     MIS1__TBtRunCnfRec* VPtRunConf = NULL; // Pointer to run conf record
     MIS1__TBtAcqRawRec* VPtAcq     = NULL; // Pointer to current Acq
-
+      
+    
+  
     
     printf ( "\n" );
     printf ( "**********************************************************\n" );
-    printf ( "Beginning of Mimosis 1 data run files access library demo \n" );
+    printf ( "Beginning of Mimossi 1 data run files access library demo \n" );
     printf ( "**********************************************************\n" );
     printf ( "\n" );
   
@@ -287,11 +287,11 @@ int BoardReaderMIMOSIS::test() {
     // Sets run directory
     
     // sprintf ( VParRunRootDir, "%s", "C:/Data/msis1" );
-    // ZE, place data directory in taf directory
+    // ZE 2021/05/26 data directory is the same level of directories hierarchy 
     sprintf ( VParRunRootDir, "%s", "data" );
-    //sprintf ( VParRunRootDir, "%s", "../../data" ); // ZE comment 
+    //sprintf ( VParRunRootDir, "%s", "../../data" );
     
-    cout << "VParRunRootDir : " << VParRunRootDir << endl;
+  
     // Sets run no
     
     VParRunNo = 777;

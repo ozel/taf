@@ -44,7 +44,7 @@ Labo      : IPHC */
     #endif
     
     #ifndef SInt8
-      typedef char SInt8;
+      typedef signed char SInt8;
     #endif
     
     #ifndef SByte

@@ -32,6 +32,9 @@
 #include "TCanvas.h"
 #include "TApplication.h"
 
+#include <iostream>
+#include <fstream>
+
 #include "BoardReaderMIMOSIS.h"
 #include "mimo_daq_lib/mimo_daq_lib.h"
 #include "mimo_daq_lib/mimo_daq_lib.c"
@@ -90,6 +93,8 @@ MIS1__TBtAcqDec*   APP_VGPtAcqDec;  // 26/05/2021 V1.1
                                     // AcqDec record = Decoded acquisition
                                     // Contains decoded pixels + info on Acq, Frames : reggions nb, fired pixels nb, etc ...
 
+
+  ofstream f_fifo;
 
 // ---------------------------------------------------------------------------------
 // Main : Mimosis 1 beam test run file access example, via class MIS1__TBtRunRead
@@ -1149,7 +1154,8 @@ BoardReaderMIMOSIS::BoardReaderMIMOSIS(int boardNumber, char* dataPath, int runN
          //printf ( "Done :-) \n" );
          //printf ( "\n" );
        //}
-   
+    
+    f_fifo.open("/tmp/fifo",ios::binary|ios::out);
    
     cout << "*****************************************" << endl;    
     cout << "    < BoardReaderMIMOSIS constructor DONE >      " << endl;
@@ -1205,6 +1211,7 @@ BoardReaderMIMOSIS::~BoardReaderMIMOSIS()
         printf ( "Free of AcqDec done :-) \n" );
       }
     
+    f_fifo.close();
     
 //  delete fCurrentEvent;
 //  delete fInputFileName;
@@ -1543,7 +1550,14 @@ void BoardReaderMIMOSIS::DecodeFrame() {
                                }
                     
                                AddPixel( MSisId, 1, VPix.C.y ,VPix.C.x );
-                   
+                              
+                              // all binary data written must be of same type: int32_t
+                              f_fifo.write((char *)&fCurrentFrameNumber,sizeof(int32_t));
+                              f_fifo.write((char *)&MSisId,sizeof(int32_t));
+                              f_fifo.write((char *)&VPix.C.x,sizeof(int32_t));
+                              f_fifo.write((char *)&VPix.C.y,sizeof(int32_t));
+                              f_fifo.flush();
+
                            }// End of Loop over pixels in a sensor for the current frame
                             
                        } // End of if condition : FiredPixNb > 0

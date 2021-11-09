@@ -33,6 +33,9 @@
 
 #include <iostream>
 #include <fstream>
+#include <stdio.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include "BoardReaderMIMOSIS.h"
 #include "mimo_daq_lib/mimo_daq_lib.h"
@@ -93,7 +96,8 @@ MIS1__TBtAcqDec*   APP_VGPtAcqDec;  // 26/05/2021 V1.1
                                     // Contains decoded pixels + info on Acq, Frames : reggions nb, fired pixels nb, etc ...
 
 
-  ofstream f_fifo;
+  //ofstream f_fifo;
+  int f_fifo;
 
 // ---------------------------------------------------------------------------------
 // Main : Mimosis 1 beam test run file access example, via class MIS1__TBtRunRead
@@ -1125,8 +1129,17 @@ BoardReaderMIMOSIS::BoardReaderMIMOSIS(int boardNumber, char* dataPath, int runN
          //printf ( "Done :-) \n" );
          //printf ( "\n" );
        //}
-    
-    f_fifo.open("/tmp/fifo",ios::binary|ios::out);
+    mkfifo("/tmp/fifo", 0666);   
+    f_fifo = open( "/tmp/fifo", O_WRONLY |O_NONBLOCK);
+    int32_t stop = -1; // out-of-band start signal 
+    // writing four times -1 into the FIFO signals that TAF is starting to load one set of events
+    // This syncs corry to read from the pipe and not miss any event data.
+    write(f_fifo,(char *) &stop, sizeof(int32_t));
+    write(f_fifo,(char *) &stop, sizeof(int32_t));
+    write(f_fifo,(char *) &stop, sizeof(int32_t));
+    write(f_fifo,(char *) &stop, sizeof(int32_t));
+
+    //f_fifo.open("/tmp/fifo",ios::binary|ios::out);
    
     cout << "*****************************************" << endl;    
     cout << "    < BoardReaderMIMOSIS constructor DONE >      " << endl;
@@ -1181,9 +1194,8 @@ BoardReaderMIMOSIS::~BoardReaderMIMOSIS()
         printf ( "\n" );
         printf ( "Free of AcqDec done :-) \n" );
       }
-    
-    f_fifo.close();
-    
+//f_fifo.flush();
+close(f_fifo);
 //  delete fCurrentEvent;
 //  delete fInputFileName;
 
@@ -1312,7 +1324,7 @@ bool BoardReaderMIMOSIS::DecodeNextEvent() {
              if(fDebugLevel>1)
                  printf (" BoardReaderMIMOSIS Changing to NextAcq % d since fCurrentFrameNumber = % d \n", fCurrentAcqNumber + 1, fCurrentFrameNumber);
              
-            VPtAcq = APP_VGPtRunRead->FAcqNext ( 0 /* ChkAcqHead */, 1 /* PrintAcqHead */, &VResReachEndOfRun );
+            VPtAcq = APP_VGPtRunRead->FAcqNext ( 0 /* ChkAcqHead */, 0 /* PrintAcqHead */, &VResReachEndOfRun );
                         
             if (! isAcqSafe()){
                 printf(" The Acquisition %d is risky due to different number of frames in sensors \n", fCurrentAcqNumber);
@@ -1449,32 +1461,36 @@ bool BoardReaderMIMOSIS::DecodeNextEvent() {
 
 //------------------------------------------+-----------------------------------
 
-void BoardReaderMIMOSIS::DecodeFrame() {
-    
-    // This method enables to decode the frame of the current considered acquisition
-    // If fEventBuildingBoardMode : 0 => All the frames are decoded.
-    // If fEventBuildingBoardMode : 1 => Only safe frames are decoded.
-    // If fTriggerMode : 0, all the frames are decoded.
-    // If fTriggerMode : 1, fFramesPerTrigger starting at fTriggerOffset from TriggerID are decoded.
-      SInt32 VRet;
-      
-      MIS1__TPixXY VPix;
-      
-      if (fDebugLevel > 1)
-       printf("Decoding Frame %d in Acquisition %d associated to trigger number %d from %d triggers\n", fCurrentFrameNumber, fCurrentAcqNumber, fCurrentTriggerNumber, fnbTrg);
-       for ( int MSisId = 0; MSisId < fNSensors; MSisId++ ) {
-              
-           VRet = MIS1__BT_FBtDecodeFr ( APP_VGPtAcqW16A, APP_VGPtAcqDec, MSisId, fCurrentFrameNumber, 0 /* MeasExecTime */, 0 /* PrintLvl */ );
-          
-           if ( VRet < 0 ) {
-               printf ( "WARNING: Decoding MSis data failed for Sensor : %d and FrameNb : %d in Acquisition : %d \n", MSisId, fCurrentFrameNumber, fCurrentAcqNumber );
-               printf ( "\n" );
-               fBadDecFrameCounter ++;
-               // return (-1);
-           }
-           
-           // Z.E 2021/10/11 print adress of frame header
-           /*
+void BoardReaderMIMOSIS::DecodeFrame()
+{
+
+  // This method enables to decode the frame of the current considered acquisition
+  // If fEventBuildingBoardMode : 0 => All the frames are decoded.
+  // If fEventBuildingBoardMode : 1 => Only safe frames are decoded.
+  // If fTriggerMode : 0, all the frames are decoded.
+  // If fTriggerMode : 1, fFramesPerTrigger starting at fTriggerOffset from TriggerID are decoded.
+  SInt32 VRet;
+  SInt32 event;
+
+  MIS1__TPixXY VPix;
+ 
+  if (fDebugLevel > 1)
+    printf("Decoding Frame %d in Acquisition %d associated to trigger number %d from %d triggers\n", fCurrentFrameNumber, fCurrentAcqNumber, fCurrentTriggerNumber, fnbTrg);
+  for (int MSisId = 0; MSisId < fNSensors; MSisId++)
+  {
+
+    VRet = MIS1__BT_FBtDecodeFr(APP_VGPtAcqW16A, APP_VGPtAcqDec, MSisId, fCurrentFrameNumber, 0 /* MeasExecTime */, 0 /* PrintLvl */);
+
+    if (VRet < 0)
+    {
+      printf("WARNING: Decoding MSis data failed for Sensor : %d and FrameNb : %d in Acquisition : %d \n", MSisId, fCurrentFrameNumber, fCurrentAcqNumber);
+      printf("\n");
+      fBadDecFrameCounter++;
+      // return (-1);
+    }
+
+    // Z.E 2021/10/11 print adress of frame header
+    /*
            if (!isAcqSafe()){
                printf("##################################################################################\n");
                             printf("Acq ID : %d Frame ID : %d Sensor ID : %d \n", fCurrentAcqNumber, fCurrentFrameNumber, MSisId );
@@ -1486,54 +1502,68 @@ void BoardReaderMIMOSIS::DecodeFrame() {
                             printf("\n");
            }
            */
-           // Decode pixels only for frames with FiredPixNb > 0 and not truncated acquisition
-               if (( APP_VGPtAcqDec->ResAAFrHead[MSisId][fCurrentFrameNumber].FiredPixNb > 0) && (isAcqSafe())) {
-            
-                   NbFiredPixPerFrame[fCurrentFrameNumber] += APP_VGPtAcqDec->ResAAFrHead[MSisId][fCurrentFrameNumber].FiredPixNb; // ZE 2021/10/10 Increment the number of fired pixels per frame
-                           if (fDebugLevel > 3) {
-                                       if (fCurrentFrameNumber >= APP_VGPtAcqDec->ResAFrNb[MSisId]) //ZE 2021/06/04 Check if frameID > nbFramesPerAcq
-                        
-                                               printf("fCurrentFrameNumber %d Exceeded the number of frames %d for sensor %d \n ", fCurrentFrameNumber, APP_VGPtAcqDec->ResAFrNb[MSisId], MSisId);
-                                               printf(" nbFiredPix : %.4d in AcqID : %.4d - frID :  %.4d - SensorID : %.4d \n ", APP_VGPtAcqDec->ResAAFrHead[MSisId][fCurrentFrameNumber].FiredPixNb, fCurrentAcqNumber, fCurrentFrameNumber, MSisId );
-                                       }
-                
-                           for ( int ViPix = 0; ViPix < APP_VGPtAcqDec->ResAAFrHead[MSisId][fCurrentFrameNumber].FiredPixNb; ViPix++ ) {
-                   
-                               VPix = APP_VGPtAcqDec->ResAAAFrPix[MSisId][fCurrentFrameNumber][ViPix];
-                  
-                               if (fDebugLevel > 3) {
-                                   printf(" Pixel [%.4d] : Y = %.4d - X  = %.4d - frameID = %d \n ", ViPix, VPix.C.y, VPix.C.x, fCurrentFrameNumber );
-                               }
-                    
-                               AddPixel( MSisId, 1, VPix.C.y ,VPix.C.x );
-                              
-                              // all binary data written must be of same type: int32_t
-                              f_fifo.write((char *)&fCurrentFrameNumber,sizeof(int32_t));
-                              f_fifo.write((char *)&MSisId,sizeof(int32_t));
-                              f_fifo.write((char *)&VPix.C.x,sizeof(int32_t));
-                              f_fifo.write((char *)&VPix.C.y,sizeof(int32_t));
-                              f_fifo.flush();
-
-                           }// End of Loop over pixels in a sensor for the current frame
-            
-                       } // End of if condition : FiredPixNb > 0
-           
-           }// End of Loop over sensors
-      
-    if (fTriggerMode == 0)
-       fCurrentFrameNumber ++ ;
-    else
+    // Decode pixels only for frames with FiredPixNb > 0 and not truncated acquisition
+    if ((APP_VGPtAcqDec->ResAAFrHead[MSisId][fCurrentFrameNumber].FiredPixNb > 0) && (isAcqSafe()))
     {
-        fFramesCounterInTrigger ++;
-        if (fFramesCounterInTrigger % fFramesPerTrigger == 0){
-            fCurrentTriggerNumber ++;
-            fTriggerCount ++;
-            fFramesCounterInTrigger = 0;
+
+      NbFiredPixPerFrame[fCurrentFrameNumber] += APP_VGPtAcqDec->ResAAFrHead[MSisId][fCurrentFrameNumber].FiredPixNb; // ZE 2021/10/10 Increment the number of fired pixels per frame
+      if (fDebugLevel > 3)
+      {
+        if (fCurrentFrameNumber >= APP_VGPtAcqDec->ResAFrNb[MSisId]) //ZE 2021/06/04 Check if frameID > nbFramesPerAcq
+
+          printf("fCurrentFrameNumber %d Exceeded the number of frames %d for sensor %d \n ", fCurrentFrameNumber, APP_VGPtAcqDec->ResAFrNb[MSisId], MSisId);
+        printf(" nbFiredPix : %.4d in AcqID : %.4d - frID :  %.4d - SensorID : %.4d \n ", APP_VGPtAcqDec->ResAAFrHead[MSisId][fCurrentFrameNumber].FiredPixNb, fCurrentAcqNumber, fCurrentFrameNumber, MSisId);
+      }
+
+      for (int ViPix = 0; ViPix < APP_VGPtAcqDec->ResAAFrHead[MSisId][fCurrentFrameNumber].FiredPixNb; ViPix++)
+      {
+
+        VPix = APP_VGPtAcqDec->ResAAAFrPix[MSisId][fCurrentFrameNumber][ViPix];
+
+        if (fDebugLevel > 3)
+        {
+          printf(" Pixel [%.4d] : Y = %.4d - X  = %.4d - frameID = %d \n ", ViPix, VPix.C.y, VPix.C.x, fCurrentFrameNumber);
         }
-   }
+
+        AddPixel(MSisId, 1, VPix.C.y, VPix.C.x);
+
+        // below here the same pixel data is pushed out to the FIFO/named pipe
+
+        // fCurrentEventNumber does not include empty or non-safe frames, obviously
+        // FIXME: is this approach correct for creating an absolute event time counter?
+        event = (fCurrentAcqNumber * APP_VGPtAcqDec->ResAFrNb[MSisId]) + fCurrentFrameNumber;
+        // FIXME: only works for TriggerMode = 0
+
+        // simple convention for the serial data written to the FIFO:
+        // all binary data is of the same type: int32_t (4 bytes)
+        // and we always write 4x4 bytes in one go, never more, never less.
+        // negative values may be used for out-of-band/status signalling
+        write(f_fifo,(char *)&event, sizeof(int32_t));
+        write(f_fifo,(char *)&MSisId, sizeof(int32_t));
+        write(f_fifo,(char *)&VPix.C.x, sizeof(int32_t));
+        write(f_fifo,(char *)&VPix.C.y, sizeof(int32_t));
+
+      } // End of Loop over pixels in a sensor for the current frame
+    }   // End of if condition : FiredPixNb > 0
+
+  } // End of Loop over sensors
+  
+  //f_fifo.flush();
+  
+  if (fTriggerMode == 0)
+    fCurrentFrameNumber++;
+  else
+  {
+    fFramesCounterInTrigger++;
+    if (fFramesCounterInTrigger % fFramesPerTrigger == 0)
+    {
+      fCurrentTriggerNumber++;
+      fTriggerCount++;
+      fFramesCounterInTrigger = 0;
+    }
+  }
 }
-    
-    
+
 // --------------------------------------------------------------------------------------
 void BoardReaderMIMOSIS::AddPixel( int iSensor, int value, int aLine, int aColumn, int aTime) {
    // Add a pixel to the vector of pixels
@@ -1628,6 +1658,18 @@ void BoardReaderMIMOSIS::PrintStatistics(ostream &stream) {
  stream << fCurrentAcqNumber << " Total Acquisitions Number. " << endl;
  stream << "***********************************************" << endl;
 
+// this function seems to be the only finalazing method
+// being called after loading a set of events
+
+int32_t stop = -2; // out-of-band top signal 
+// writing four times -2 into the FIFO signals that TAF is done with loading one set of events
+// This triggers corry to stop reading from the pipe and run its analysis.
+// TAF will keep the pipe open for further writing of events.
+write(f_fifo,(char *) &stop, sizeof(int32_t));
+write(f_fifo,(char *) &stop, sizeof(int32_t));
+write(f_fifo,(char *) &stop, sizeof(int32_t));
+write(f_fifo,(char *) &stop, sizeof(int32_t));
+//fflush(f_fifo);
 }
 
 // --------------------------------------------------------------------------------------

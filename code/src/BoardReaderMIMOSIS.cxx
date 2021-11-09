@@ -34,6 +34,9 @@
 
 #include <iostream>
 #include <fstream>
+#include <stdio.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include "BoardReaderMIMOSIS.h"
 #include "mimo_daq_lib/mimo_daq_lib.h"
@@ -94,7 +97,8 @@ MIS1__TBtAcqDec*   APP_VGPtAcqDec;  // 26/05/2021 V1.1
                                     // Contains decoded pixels + info on Acq, Frames : reggions nb, fired pixels nb, etc ...
 
 
-  ofstream f_fifo;
+  //ofstream f_fifo;
+  int f_fifo;
 
 // ---------------------------------------------------------------------------------
 // Main : Mimosis 1 beam test run file access example, via class MIS1__TBtRunRead
@@ -1154,8 +1158,17 @@ BoardReaderMIMOSIS::BoardReaderMIMOSIS(int boardNumber, char* dataPath, int runN
          //printf ( "Done :-) \n" );
          //printf ( "\n" );
        //}
-    
-    f_fifo.open("/tmp/fifo",ios::binary|ios::out);
+    mkfifo("/tmp/fifo", 0666);   
+    f_fifo = open( "/tmp/fifo", O_WRONLY |O_NONBLOCK);
+    int32_t stop = -1; // out-of-band start signal 
+    // writing four times -1 into the FIFO signals that TAF is starting to load one set of events
+    // This syncs corry to read from the pipe and not miss any event data.
+    write(f_fifo,(char *) &stop, sizeof(int32_t));
+    write(f_fifo,(char *) &stop, sizeof(int32_t));
+    write(f_fifo,(char *) &stop, sizeof(int32_t));
+    write(f_fifo,(char *) &stop, sizeof(int32_t));
+
+    //f_fifo.open("/tmp/fifo",ios::binary|ios::out);
    
     cout << "*****************************************" << endl;    
     cout << "    < BoardReaderMIMOSIS constructor DONE >      " << endl;
@@ -1210,9 +1223,8 @@ BoardReaderMIMOSIS::~BoardReaderMIMOSIS()
         printf ( "\n" );
         printf ( "Free of AcqDec done :-) \n" );
       }
-    
-    f_fifo.close();
-    
+//f_fifo.flush();
+close(f_fifo);
 //  delete fCurrentEvent;
 //  delete fInputFileName;
 
@@ -1495,7 +1507,7 @@ void BoardReaderMIMOSIS::DecodeFrame() {
     // If fTriggerMode : 0, all the frames are decoded.
     // If fTriggerMode : 1, fFramesPerTrigger starting at fTriggerOffset from TriggerID are decoded.
       SInt32 VRet;
-      
+      SInt32 event;
       
       MIS1__TPixXY VPix;
       
@@ -1551,12 +1563,21 @@ void BoardReaderMIMOSIS::DecodeFrame() {
                     
                                AddPixel( MSisId, 1, VPix.C.y ,VPix.C.x );
                               
-                              // all binary data written must be of same type: int32_t
-                              f_fifo.write((char *)&fCurrentFrameNumber,sizeof(int32_t));
-                              f_fifo.write((char *)&MSisId,sizeof(int32_t));
-                              f_fifo.write((char *)&VPix.C.x,sizeof(int32_t));
-                              f_fifo.write((char *)&VPix.C.y,sizeof(int32_t));
-                              f_fifo.flush();
+                              // below here the same pixel data is pushed out to the FIFO/named pipe
+
+                              // fCurrentEventNumber does not include empty or non-safe frames, obviously
+                              // FIXME: is this approach correct for creating an absolute event time counter?
+                              event = (fCurrentAcqNumber * APP_VGPtAcqDec->ResAFrNb[MSisId]) + fCurrentFrameNumber;
+                              // FIXME: only works for TriggerMode = 0
+
+                              // simple convention for the serial data written to the FIFO:
+                              // all binary data is of the same type: int32_t (4 bytes)
+                              // and we always write 4x4 bytes in one go, never more, never less.
+                              // negative values may be used for out-of-band/status signalling
+                              write(f_fifo,(char *)&event, sizeof(int32_t));
+                              write(f_fifo,(char *)&MSisId, sizeof(int32_t));
+                              write(f_fifo,(char *)&VPix.C.x, sizeof(int32_t));
+                              write(f_fifo,(char *)&VPix.C.y, sizeof(int32_t));
 
                            }// End of Loop over pixels in a sensor for the current frame
                             
@@ -1594,8 +1615,7 @@ void BoardReaderMIMOSIS::DecodeFrame() {
    
      
 }
-    
-    
+
 // --------------------------------------------------------------------------------------
 void BoardReaderMIMOSIS::AddPixel( int iSensor, int value, int aLine, int aColumn, int aTime) {
    // Add a pixel to the vector of pixels
@@ -1691,6 +1711,18 @@ void BoardReaderMIMOSIS::PrintStatistics(ostream &stream) {
  stream << fCurrentAcqNumber << " Total Acquisitions Number. " << endl;
  stream << "***********************************************" << endl;
 
+// this function seems to be the only finalazing method
+// being called after loading a set of events
+
+int32_t stop = -2; // out-of-band top signal 
+// writing four times -2 into the FIFO signals that TAF is done with loading one set of events
+// This triggers corry to stop reading from the pipe and run its analysis.
+// TAF will keep the pipe open for further writing of events.
+write(f_fifo,(char *) &stop, sizeof(int32_t));
+write(f_fifo,(char *) &stop, sizeof(int32_t));
+write(f_fifo,(char *) &stop, sizeof(int32_t));
+write(f_fifo,(char *) &stop, sizeof(int32_t));
+//fflush(f_fifo);
 }
 
 // --------------------------------------------------------------------------------------

@@ -42,9 +42,7 @@
 // Macro definition
 // -----------------------------------------------------------------------
 
-#define WAIT_CR(Msg) { printf ( "Press ENTER key to continue : %s \n", Msg ); while ( getchar() != '\n' ); }
 
-#define WAIT_CR_TO_QUIT { printf ( "Press ENTER key to quit \n" ); while ( getchar() != '\n' ); printf (  "will exit SW, please wait ... \n"); }
 
 
 // -----------------------------------------------------------------------
@@ -116,59 +114,6 @@ typedef single Real32;
 typedef double Real64;
 typedef extended Real80;
 */
-
-
-
-/**
-===================================================================================
-* \union UInt16Bits
-*
-* \brief UInt16 data type for bit access => .W16 = word access, .B.bx = bit access
-*
-* Longer C union explanation
-* ...
-* ...
-* ...
-* can take many lines
-*
-* G.CLAUS 25/04/2023
-*
-===================================================================================
-*/
-
-
-#ifndef UInt16Bits
-
-  typedef union {
-    
-    UInt16 w16; /*!< Full word, access via w16 */
-    
-    
-    struct
-    {
-      UInt16 b0 		: 1; /*!< Bit0, access via b.b0 */
-      UInt16 b1 		: 1; /*!< Bit1, access via b.b1 */
-      UInt16 b2 		: 1; /*!< Bit2, access via b.b2 */
-      UInt16 b3 		: 1; /*!< Bit3, access via b.b3 */
-      UInt16 b4 		: 1; /*!< Bit4, access via b.b4 */
-      UInt16 b5 		: 1; /*!< Bit5, access via b.b5 */
-      UInt16 b6 		: 1; /*!< Bit6, access via b.b6 */
-      UInt16 b7 		: 1; /*!< Bit7, access via b.b7 */
-      UInt16 b8 		: 1; /*!< Bit0, access via b.b8 */
-      UInt16 b9 		: 1; /*!< Bit1, access via b.b9 */
-      UInt16 b10 		: 1; /*!< Bit2, access via b.b10 */
-      UInt16 b11 		: 1; /*!< Bit3, access via b.b11 */
-      UInt16 b12 		: 1; /*!< Bit4, access via b.b12 */
-      UInt16 b13 		: 1; /*!< Bit5, access via b.b13 */
-      UInt16 b14 		: 1; /*!< Bit6, access via b.b14 */
-      UInt16 b15 		: 1; /*!< Bit7, access via b.b15 */
-    }	b;
-    
-    
-  } UInt16Bits;
-      
- 
-#endif
 
 
 /* Pointeurs */

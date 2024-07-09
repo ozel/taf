@@ -26,7 +26,9 @@
 #define MIMOSIS1_DEF
 
 
- 
+  
+// #define MIS1__CC_DECODE_FR_STRICT
+  
   
 // ===================================================================================
 // * Simple / short macros (comment not processed by DOXYGEN)
@@ -78,6 +80,9 @@
 //
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+
+// #define MIS1__CC_USE_BT_FBtDecStdPixMSis2Dbg // Defined => Use function MIS1__BT_FBtDecStdPixMSis2Dbg (...) for MSis 2 cluster decoding, messages printing can be enabled / disble via MIS1__BT_FBtDecStdPixEnDbg ()
+                                             // Undefined => Use function MIS1__BT_FBtDecStdPixMSis2(...) which is fatser but doesn't provide debug print
 
 /**
 ===================================================================================
@@ -696,9 +701,9 @@ typedef enum  {
   #define MIS1__TBtRunRead_DEF_ERR_LOG_FILE "C:/iphc/C4PI/sw/log/err_MIS1__TBtRunRead.txt" // 21/05/2021
 #endif
 
-//#ifndef MIS1__TBtRunRead_DEF_MSG_LOG_FILE
-//  #define MIS1__TBtRunRead_DEF_MSG_LOG_FILE "C:/iphc/C4PI/sw/log/msg_MIS1__TBtRunRead.txt" // 21/05/2021
-//#endif
+#ifndef MIS1__TBtRunRead_DEF_MSG_LOG_FILE
+  #define MIS1__TBtRunRead_DEF_MSG_LOG_FILE "C:/iphc/C4PI/sw/log/msg_MIS1__TBtRunRead.txt" // 21/05/2021
+#endif
 
 
 #define MIS1__BT_REC_TAG_BEGIN  0x66778800  // Record beginning  tag = first W32 of a record
@@ -722,7 +727,7 @@ typedef enum  {
 #define MIS1__BT_RUN_TDI_FILE_FORMAT  1  // Run TDI = Trigger Data Index, file format version
 
 
-#define MIS1__BT_SUP_FRAME_FACTOR  8 // Super frame multiplicator or factor, one frame can bu up to MIS1__BT_SUP_FRAME_FACTOR normal frame size
+#define MIS1__BT_SUP_FRAME_FACTOR  8 // Super frame multiplicator or factor, one frame can be up to MIS1__BT_SUP_FRAME_FACTOR normal frame size
 
 #define MIS1__BT_TOT_FRAME_SZ_W128  (25 * MIS1__BT_SUP_FRAME_FACTOR) // 100 W16 / OUT x 2 OUT = 200 W16 = 25 W128 to be checked !!!  // 31/05/2021 => X 8
 
@@ -756,7 +761,8 @@ typedef enum  {
 // Variable Record Size Size (VRS) parameters
 
 
-#define MIS1__BT_VRS_MAX_FR_NB_PER_ACQ  6000 // 7000 // 10000
+#define MIS1__BT_VRS_MAX_FR_NB_PER_ACQ  7000 // 6000 on 06/06/2021 => run read lib compiled with 6000 but DAQ DLL requires to be compile with 7000 because 7000 hard coded in LV
+                                        // 7000 // 10000
 
 #define MIS1__BT_VRS_MAX_ACQ_DATA_SZ_W8 (MIS1__BT_MAX_MSIS_NB_ACQ *  MIS1__BT_VRS_MAX_FR_NB_PER_ACQ * MIS1__BT_TOT_FRAME_SZ_W8)
 

@@ -2740,6 +2740,10 @@ typedef struct {
   UInt32 FrCnt;                    /*!<  Frame counter extracted from MSisFrHead */
   
   SInt32 Errors;                   /*!<  Errors detected in frame, 0 = None, < 0 SW error in data decoding, > 0 Msis HW error, ovf etc => Values are defined by MIS1__TBtFrError */
+    
+  UInt8  NoTrailer;                /*!<  08/06/2021 : 0 => Normal frame, 1 => Frame without trailer */
+  UInt8  Truncated;                /*!<  09/06/2021 : 0 => Normal frame, 1 => Frame truncated = no trailer, MSis 1 bug or last frame of Acq longer than 5 us */
+  
 
   SInt32 FrDataSzW16;                               /*!< Size of frame data part in W16 => Without header and trailer, < 0 => not calculated / error   */
   SInt32 FirstDataW16Pos;                           /*!< Position of first W16 of frame in MIS1__TBtAcqW16A.AAMsis[MSisId][W16Id], unit = W16, < 0 => not calculated / error  */
@@ -2781,6 +2785,8 @@ typedef struct {
   SInt32 ResARegNb        [MIS1__BT_MAX_REAL_MSIS_NB_ACQ]; /*!< Counter regions, index  is [MSisId]  */
   SInt32 ResAPixNb        [MIS1__BT_MAX_REAL_MSIS_NB_ACQ]; /*!< Counter fired pixels, index  is [MSisId]  */
 
+
+  SInt32 ResAFrNbOvfFlags [MIS1__BT_MAX_REAL_MSIS_NB_ACQ]; /*!< Array of frames nb with overflow flags sets in trailer - 09/10/2021 */
 
   
   MIS1__TBtFrDecHead ResAAFrHead[MIS1__BT_MAX_REAL_MSIS_NB_ACQ][MIS1__BT_VRS_MAX_FR_NB_PER_ACQ]; /*!< Array of frames header, indexes are [MSisId][FrameId]  */

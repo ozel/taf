@@ -35,7 +35,19 @@ SInt32 MIS1__TBtRunRead_FErrLogUsrPrint ( char Type, char* ErrLocation, char* Er
 SInt32 MIS1__TBtRunRead_FMsgLogUsrPrint ( char* Msg );
 
 
+// 17/06/2024
+
+SInt32 MIS1__FSetMSisVersion ( SInt8 Version );
+SInt32 MIS1__FGetMSisVersion ( );
+
+double MIS1__BT_FBtDecodeFrMSis2 ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl );
+double MIS1__BT_FBtDecodeFrMSis1 ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl );
+
+
+
 // 22/05/2021
+
+SInt32 MIS1__BT_FBtDecStdPixEnDbg ( SInt8 PrintLvl );
 
 MIS1__TBtAcqW16A* MIS1__BT_FBtAcqW16AAlloc ( UInt8 Alloc, UInt32* PtRecSz );
 SInt32            MIS1__BT_FBtAcqW16AFree ( MIS1__TBtAcqW16A* PtRec );
@@ -49,10 +61,10 @@ SInt32            MIS1__BT_FBtAcqW16APrintMSisU16 ( MIS1__TBtAcqW16A* Pt, UInt8 
 MIS1__TBtAcqDec*  MIS1__BT_FBtAcqDecAlloc ( UInt8 Alloc, UInt32* PtRecSz );
 
 SInt32            MIS1__BT_FBtAcqDecFree ( MIS1__TBtAcqDec* PtRec );
-double            MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, UInt8 PrintLvl );
+double            MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl );
 SInt32            MIS1__BT_FBtDecodeFrGetWarnErr ( UInt8 Reset );
 
-double            MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, UInt8 PrintLvl );
+double            MIS1__BT_FBtDecodeFr     ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl );
 SInt32            MIS1__BT_FFrDecHeadPrint ( MIS1__TBtFrDecHead* Pt, UInt8 PrintMode );
 SInt32            MIS1__BT_FAcqDecPrintGen ( MIS1__TBtAcqDec* Pt, SInt8 MSisId, UInt8 PrintMode );
 SInt32            MIS1__BT_FAcqDecPrintPix ( MIS1__TBtAcqDec* Pt, SInt8 MSisId, UInt32 FrId, UInt32 MaxPixToPrint, UInt8 PrintMode );

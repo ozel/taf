@@ -1,3 +1,4 @@
+
 /**
 * ----------------------------------------------------------------------------------
 * \file              X:\lib\com\maps\msis1\data\msis1_data.c
@@ -28,8 +29,69 @@
 
 
 
-#ifndef CC_MSIS1_BDF_LIGHT
+/**
+===================================================================================
+* \var EXTERN VAR_STATIC SInt32 MIS1__VGDecodeFrOkFrNb
+*
+* \brief Global variable which contains frames nb decoded witout error for ALL MSis 1
+*        for last call of
+*         - MIS1__BT_FBtDecodeFrLight (...)
+*         - MIS1__BT_FBtDecodeFr (...)
+*
+*  Rq : Should not be declared here, but I don't want to include *.var in prj
+*
+* G.CLAUS 14/10/2021
+*
+===================================================================================
+*/
 
+
+static SInt32 MIS1__VGADecodeFrOkFrNb[MIS1__BT_MAX_MSIS_NB_ACQ]; // static => sets to 0
+
+
+/**
+===================================================================================
+* \var EXTERN SInt8 MIS1__VGMSisVersion 
+*
+* \brief Mimosis version, it is used by MIS1__BT_FBtDecodeFr (...) 
+*
+* This variable is used to select pixels decoding method in MIS1__BT_FBtDecodeFr (...) 
+* It can take the following values
+* 0  = MSis 0   => Not allowed as MSis 0 is not handled by this library
+* 1  = MSis 1   => One data W16 = One pixel
+* 2  = MSis 2   => Clusterization, one data W16 = up to 4 pixels
+* 21 = MSis 2.1 => Idem 2
+*
+*
+* G.CLAUS 17/06/2024
+*
+===================================================================================
+*/
+
+
+static SInt8 MIS1__VGMSisVersion VAR_INIT(1); // Possible values 0 = MSis 0 = Not allowed, 1 = MSis 1, 2 = MSis 2, 21 = MSis 2.1
+// 16/06/2024
+
+
+/**
+===================================================================================
+* \var EXTERN VAR_STATIC Uint8 MIS1__BT_VGBtDecStdPixMSis2PrintLvl
+*
+* \brief Global variable which sets print level of function  MIS1__BT_FBtDecStdPixMSis2Dbg (...)
+*
+*
+* G.CLAUS 21/06/2024
+*
+===================================================================================
+*/
+
+SInt8 MIS1__BT_VGBtDecStdPixMSis2PrintLvl VAR_INIT(0);
+
+
+
+
+
+#ifndef CC_MSIS1_BDF_LIGHT
 
 
 
@@ -114,6 +176,8 @@ SInt32 MIS1__FVersionGet ( char* VerStr, UInt32* PtVerMajor, UInt32* PtVerMinor,
 
 
 
+
+
 /* DOC_FUNC_BEGIN */
 /**
 ===================================================================================
@@ -172,6 +236,73 @@ SInt32 MIS1__FTemplateForDoc ( SInt32 InNumber, char* InStr ) {
   
 }
 
+
+
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : char* MIS1__FToolPrintW128 ( TW128As8W16* PtW128, SInt8 PrintMsg, TMemo* Memo )
+*          :
+* \brief   :  \n
+*          : \n
+*          :
+* \param   :  -
+*          :
+*          :
+* \return  : Error code
+*          :   0 - OK
+*          : < 0 - Error
+*          :
+* \warning : Globals   :
+* \warning : Remark    :
+* \warning : Level     :
+*          :
+* \warning : Items not filled now :
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 07/09/2023
+* \date    : Doc date  : 07/09/2023
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+
+char* MIS1__FToolPrintW128 ( TW128As8W16* PtW128, SInt8 PrintD0D7orD7D0, SInt8 PrintMsg, TMemo* Memo ) {
+
+  static char VStrW128[GLB_CMT_SZ];
+  static char VStrW8_0_1_15[GLB_CMT_SZ];
+  
+  // sprintf ( VStrW128, "D0 = %4X, D1 = %4X, D2 = %4X, D3 = %4X, D4 = %4X, D5 = %4X, D6 = %4X, D7 = %4X", PtW128[0], PtW128[1], PtW128[2], PtW128[3], PtW128[4], PtW128[5], PtW128[6], PtW128[7] );
+  
+  if ( PrintD0D7orD7D0 ) {
+    sprintf ( VStrW128, "D7 = %4X, D6 = %4X, D5 = %4X, D4 = %4X, D3 = %4X, D2 = %4X, D1 = %4X, D0 = %4X", (*PtW128)[7], (*PtW128)[6], (*PtW128)[5], (*PtW128)[4], (*PtW128)[3], (*PtW128)[2], (*PtW128)[1], (*PtW128)[0] );
+  }
+  
+  else {
+    sprintf ( VStrW128, "D0 = %4X, D1 = %4X, D2 = %4X, D3 = %4X, D4 = %4X, D5 = %4X, D6 = %4X, D7 = %4X", (*PtW128)[0], (*PtW128)[1], (*PtW128)[2], (*PtW128)[3], (*PtW128)[4], (*PtW128)[5], (*PtW128)[6], (*PtW128)[7] );   
+  }
+  
+  
+  
+  sprintf ( VStrW8_0_1_15, "U8[0] = %X, U8[1] = %X, U8[15] = %X", ((UInt8*) PtW128)[0], ((UInt8*) PtW128)[1], ((UInt8*) PtW128)[15] );
+    
+  if ( PrintMsg ) {
+    msg (( MSG_OUT, "W128  = %s", VStrW128 ));
+    msg (( MSG_OUT, "U8[x] = %s", VStrW8_0_1_15 ));
+  }
+
+  if ( Memo != NULL ) {
+    Memo->Lines->Add ( "W128  = " + AnsiString (VStrW128) );
+    Memo->Lines->Add ( "U8[x] = " + AnsiString (VStrW8_0_1_15) );
+  }
+  
+  return (VStrW128);
+}
 
 
 /* DOC_FUNC_BEGIN */
@@ -7871,6 +8002,8 @@ SInt32 MIS1__FRunFilesBegin ( char* ErrLogFile, SInt8 ErrLogLvl, UInt8 ObjId = 0
 #else
 
 
+
+
 SInt32 MIS1__FRunFilesBegin ( UInt8 ObjId = 0 ) {
   
   SInt32 VRet;
@@ -8118,17 +8251,26 @@ SInt32 MIS1__FRunFilesOpen ( char* RunConfFile, SInt8 ReadRaw, SInt8 ReadDec, SI
 
 #else
 
+
+
+
+
+
+
+
+
+
 SInt32 MIS1__FRunFilesOpen ( char* RunConfFile, SInt8 ReadRaw, SInt8 ReadDec, SInt8 ReadFP, UInt8 ObjId = 0 ) {
-  
+
   SInt32 VRet;
   MIS1__TRunFiles*  VPtRF;
   MIS1__TRunConf*   VPtRConf;
   MIS1__TRunPar*    VPtRPar;
   MIS1__TRunInf*    VPtRInf;
   MIS1__TRunStatus* VPtRStatus;
-  
+
   // Check param
-  
+
   if ( ObjId >= MIS1__MAX_RUN_FILES ) {
     err_retfail ( -1, (ERR_OUT,"Abort => ObjId = %d out of range [0..%d]", ObjId, MIS1__MAX_RUN_FILES - 1) );
   }
@@ -14935,6 +15077,131 @@ SInt32 MIS1__BT_VGDecodecFrWarnErr = 0; // Used by MIS1__BT_FBtDecodeFrGetWarnEr
 
 
 
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : SInt32 MIS1__FSetMSisVersion ( SInt8 Version )
+*          
+* \brief   : Set MSis version
+*     
+*          
+*          
+* \param   : Version  -  0 = MSis 0 (not allowed), 1 = MSis 1, 2 = MSis 2, 21 = MSis 2.1 \n
+
+*          :
+* \return  : Error code   \n
+*          :   0 - OK     \n
+*          : < 0 - Error  \n
+*          
+* \warning : Globals   : Updates MIS1__VGMSisVersion
+* \warning : Remark    :
+* \warning : Level     :
+*          
+* Items not filled now : \n
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 17/06/2024
+* \date    : Doc date  : 17/06/2024
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+
+SInt32 MIS1__FSetMSisVersion ( SInt8 Version ) {
+  
+  SInt8 VNotSupported;
+  
+  // Check version
+  
+  
+  switch ( Version ) {
+    
+    case 0 : {  
+      // MSis 0 Not supported
+      VNotSupported = -1;
+    } 
+
+    case 1 : {
+       // MSis 1 => OK
+       VNotSupported = 0;
+      break;
+    }  
+
+    case 2 : {
+      // MSis 2 => OK
+      VNotSupported = 0;
+      break;
+    }  
+
+    case 21 : {
+      // MSis 2.1 => OK
+      VNotSupported = 0;
+      break;
+    }  
+
+    default : {
+      VNotSupported = -1;
+      break;
+    }  
+
+  }
+
+  err_retfail ( VNotSupported, (ERR_OUT,"Abort MSis version =  %d is not supported by lib", MIS1__VGMSisVersion) );
+
+
+  MIS1__VGMSisVersion = Version;
+  
+  return (0); 
+}
+
+
+
+
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : SInt32 MIS1__FGetMSisVersion ( )
+*
+* \brief   : Returns MSis version, which has been set by MIS1__FSetMSisVersion ( Version )
+*
+* \param   : None
+
+*          :
+* \return  : Msis version   \n
+*
+* \warning : Globals   : Reads MIS1__VGMSisVersion
+* \warning : Remark    :
+* \warning : Level     :
+*
+* Items not filled now : \n
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 17/06/2024
+* \date    : Doc date  : 17/06/2024
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+
+
+SInt32 MIS1__FGetMSisVersion ( ) {
+
+  return ( MIS1__VGMSisVersion );
+
+}
+
+
+
 
 /* DOC_FUNC_BEGIN */
 /**
@@ -16777,7 +17044,9 @@ char* MIS1__TBtRunRead::FErrLogSetFilename () {
 char* MIS1__TBtRunRead::FMsgLogSetFilename () {
   
   SInt32 VRet;
-  static char VMsgLogFile[GLB_FILE_PATH_SZ]  = MIS1__TBtRunRead_DEF_MSG_LOG_FILE;  
+  static char VMsgLogFile[GLB_FILE_PATH_SZ]  = MIS1__TBtRunRead_DEF_MSG_LOG_FILE;
+    
+  
   return (  VMsgLogFile );
 }
 
@@ -18251,7 +18520,13 @@ MIS1__TBtAcqRawRec* MIS1__TBtRunRead::_FFirstAcqOfRawFileGetSeq ( UInt32 RawFile
     }
     
     else {
-      err_warning (( ERR_OUT, "Strange : raw file id = %d is opened but file ptr == NULL !!!", _CurRawFileId ));
+      
+      // Now warning if _CurRawFileId == -1 => Because it is the first time a file is loaded, therefore not file have been opened before - 20/06/2024 GC 
+      
+      if ( _CurRawFileId != -1 ) {
+        err_warning (( ERR_OUT, "Strange : raw file id = %d is opened but file ptr == NULL !!!", _CurRawFileId ));
+      }
+      
     }
     
     _CurRawFilePt = NULL;
@@ -20748,10 +21023,596 @@ SInt32 MIS1__BT_FBtDecodeFrGetWarnErr ( UInt8 Reset ) {
 }
 
 
+// ======================================================================
+// MIS1__BT_FBtDecodeFrLight (...) version for CERN BT pb debugging
+// ======================================================================
+
+// double MIS1__BT_FBtDecodeFrLight_dbg_bt_cern ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl ) {
+  
+
+double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl ) {
+  
+  static UInt8 VEmulFrNoTrail = 0;
+  
+  SInt32      VRetOk;
+  
+  SInt8       VPrintLvlAbs;
+  
+  double      VExecTimeUs;
+  
+  SInt32      VSrcW16;    // W16 to convert
+  // UInt16*     VPtSrcW16;  // Pointer to W16 to convert
+  
+  UInt32      VW16Nb;     // Total W16 nb to process for this MSis 1
+  SInt32      ViW16;      // Index of W16 processed
+  SInt32      VFrCnt;     // Counter of detected frames = counter of MSis 1 frame headers in data stream
+  SInt32      VFakeHdCnt; // Counter of fake headers => first W16 is header tag but not following 7 W16
+  SInt32      VFrWithoutTrailerCnt; // Counter of frames without trailer
+  SInt32      ViW16CurHead; // First W16 of current header
+  SInt32      VFrOvfFlagsCnt; // Counter of frames with at leats one OVF flag set 09/10/2021
+  
+  
+  TW128As8W16 VFrHd;   // Frame header (128 bits)
+  UInt16      VFrHdW0; // Frame header W0
+  UInt16      VFrHdW1; // Frame header W1
+  UInt16      VFrHdW2; // Frame header W2
+  UInt16      VFrHdW3; // Frame header W3
+  UInt16      VFrHdW4; // Frame header W4
+  UInt16      VFrHdW5; // Frame header W5
+  UInt16      VFrHdW6; // Frame header W6
+  UInt16      VFrHdW7; // Frame header W7
+  
+  
+  
+  SInt32      VRegCntInFr;        // Counter of regiosn in frame
+  SInt32      VRegCntInAcq;       // Counter of regiosn in Acq
+  SInt32      VPixCntInFr;        // Counter of pixels in each frame
+  SInt32      VPixCntInAcq;       // Counter of pixels in Acq
+   
+  // Flags
+  
+  UInt8       VFrWithoutTrailer;  // Flag to handle frames without a trailer at the end, a header can starts
+  UInt8       VTrailerDetected;   // Flag => trailer detected in current frame scanning
+  UInt8       VFrTooLong;         // Flag => frame length > max possible
+  UInt8       VFrEnd;             // Flag => end of frame = OR of previous flags
+  UInt8       VDataAfterTrailer;  // Flag => Data dtectedt after frame trailer
+  
+  SInt32      VDataAfterTrailerNb; // Counter of data after trailer
+  
+  
+  MIS1__TBtFrDecHead* VPtFrDecHead;
+  
+  // Dbg 12/10/21
+  
+  SInt8  VDbgPrintFrDataSz  = 1; // 0, do nothing, 1 prints data size of each frame
+  SInt32 VDbgSumAllFrDataSz = 0;
+  
+
+
+
+  VPrintLvlAbs = abs ( PrintLvl );
+  
+  
+  // Check MSis version
+  // Only MSis 1 is supported, MSis 2, 2.1 are not implemented, they are in MIS1__BT_FBtDecodeFr (...)
+  // Remark : MSis 0 is not supported by this lib
+  
+  if ( MIS1__VGMSisVersion != 1 ) {
+    err_retfail ( -1, (ERR_OUT,"Abort => Only MSis 1 is supported - MSis version = %d", MIS1__VGMSisVersion ) );
+  }
+  
+  
+  
+  
+  // Check param
+  
+  // ----------------------------------------------
+  // WARNING
+  // ----------------------------------------------
+  //
+  // NO parameters checking to save execution time, it is done in ...
+  // => This function SHOULD not be called directly, but only via ...
+  // => In case you need to call it directly => Check parameters you provide
+  
+  // Measure exec time
+  
+  #ifndef CC_NOT_CPP_BUILDER
+  
+  if ( MeasExecTime ) {
+    TIME__FMeasTimeUsBegin ( 0 /* Index */ );
+  }
+  
+  
+  #else
+  
+  // You can implement here exec tiome measurement for compiler <> C++ Builder
+  
+  
+  #endif
+  
+  // Propagates AcqId and Triggers nb
+  
+  PtDest->AcqId  = PtSrc->AcqId;
+  PtDest->TrigNb = PtSrc->AcqRawHead.Trigs.TrigNb; // Added on 30/05/2021
+  
+  
+  // Init var
+  
+  VRetOk       = 1;
+  
+  VW16Nb       = PtSrc->MSisW16Nb;
+  ViW16CurHead = 0;
+  VFrCnt       = 0;
+  VFakeHdCnt   = 0;
+  VFrWithoutTrailerCnt = 0;
+  
+  VFrOvfFlagsCnt       = 0;
+  
+  
+  VFrWithoutTrailer = 0;
+  VTrailerDetected  = 0;
+  VFrTooLong        = 0;
+  VFrEnd            = 0;
+  VDataAfterTrailer = 0;
+  
+  
+  VRegCntInFr  = 0;
+  VPixCntInFr  = 0;
+  VRegCntInAcq = 0;
+  VPixCntInAcq = 0;
+  
+  VDataAfterTrailerNb = 0;
+  
+  
+  VPtFrDecHead = &PtDest->ResAAFrHead[MSisId][0];
+  
+  // Reset frames truncated & errors counters - 30/05/2021
+  
+  PtDest->ResAFrNbTrunc[MSisId]     = 0;
+  PtDest->ResAFrNbErr[MSisId]       = 0;
+  
+  // Reset decoding function warnings + errors counter - 30/05/2021
+  
+  MIS1__BT_VGDecodecFrWarnErr = 0;
+  
+  // -------------------------------------------------------------
+  // Frames decoding
+  // -------------------------------------------------------------
+  
+  
+  if ( VPrintLvlAbs ) {
+    msg (( MSG_OUT, "Decode MSis No %d, Src frame = %d W16", MSisId, VW16Nb ));
+  }
+  
+  
+  if ( VDbgPrintFrDataSz ) {
+    err_error (( ERR_OUT, "Decode : AcqId = %.4d MSisId = %d, DataSz = %d W8", PtSrc->AcqId, MSisId, PtSrc->AcqRawHead.DataSz ));
+  }
+    
+  
+  for ( ViW16 = 0; ViW16 < VW16Nb;  ) {
+    
+    // Try to handle frames without trailer
+    //  - the first header field (W0) has already been detected at end of previous frame, don't read it again it is already here
+    
+    if ( VFrWithoutTrailer == 0 ) {
+      VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+    }
+    
+    // Check if there are data after the trailer
+    
+    if ( ((VSrcW16 & 0xFF00) != 0xFE00) && (VSrcW16 != 0xFCAA) ) {
+      VDataAfterTrailer = 1;
+      VDataAfterTrailerNb++;
+      
+      if ( PrintLvl < 0 ) {
+        msg (( MSG_OUT, "MSis[%d] Fr = %.4d : DATA[iW16 = %.4d] = %X, ", MSisId, VFrCnt, ViW16, VSrcW16 ));
+      }
+      
+    }
+    
+    
+    // Detects first W16, W0 of a frame header
+    
+    if ( (VSrcW16 & 0xFF00) == 0xFE00 ) {
+      
+      ViW16CurHead = ViW16 - 1;
+      
+      VFrHdW0 = VSrcW16;
+      
+      // Checks that next 7 are also frame header tags
+      
+      VFrHdW1 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW2 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW3 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW4 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW5 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW6 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW7 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      
+      // Header confirmed
+      
+      // if ( 1 ) {
+        
+        if ( ((VFrHdW1 & 0xFF00) == 0xFE00) && ((VFrHdW2 & 0xFF00) == 0xFE00) && ((VFrHdW3 & 0xFF00) == 0xFE00) && ((VFrHdW4 & 0xFF00) == 0xFE00) && ((VFrHdW5 & 0xFF00) == 0xFE00) && ((VFrHdW6 & 0xFF00) == 0xFE00) && ((VFrHdW7 & 0xFF00) == 0xFE00)  ) {
+          
+                    
+          // Reset regions cnt, fired pixels cnt, flags
+          
+          VRegCntInFr       = 0;
+          VPixCntInFr       = 0;
+          
+          VFrWithoutTrailer = 0;
+          VTrailerDetected  = 0;
+          VFrTooLong        = 0;
+          VFrEnd            = 0;
+          
+          
+          // Update frame header results
+          
+          VPtFrDecHead->MSisId = MSisId;
+          VPtFrDecHead->FrId   = VFrCnt;
+          
+          VFrCnt++;
+          
+          // Extract header
+          
+          VPtFrDecHead->MSisFrHead.AW16[0] = VFrHdW0;
+          VPtFrDecHead->MSisFrHead.AW16[1] = VFrHdW1;
+          VPtFrDecHead->MSisFrHead.AW16[2] = VFrHdW2;
+          VPtFrDecHead->MSisFrHead.AW16[3] = VFrHdW3;
+          VPtFrDecHead->MSisFrHead.AW16[4] = VFrHdW4;
+          VPtFrDecHead->MSisFrHead.AW16[5] = VFrHdW5;
+          VPtFrDecHead->MSisFrHead.AW16[6] = VFrHdW6;
+          VPtFrDecHead->MSisFrHead.AW16[7] = VFrHdW7;
+          
+          // Extract frames counter
+          
+          VPtFrDecHead->FrCnt = (VFrHdW0 &0xFF) + ((VFrHdW1 & 0xFF) << 8) + ((VFrHdW2 & 0xFF) << 16) + ((VFrHdW3 & 0xFF) << 24);
+          
+          
+          if ( VDbgPrintFrDataSz ) {
+            err_error (( ERR_OUT, "Decode : AcqId = %.4d MSisId = %d, FrId = %.4d, , FrCnt = %u, HEADER DETECTED", PtSrc->AcqId, MSisId, VPtFrDecHead->FrId, VPtFrDecHead->FrCnt ));
+          }
+        
+          
+          
+          if ( VPrintLvlAbs >= 2  ) {
+            msg (( MSG_OUT, "Header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFrCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
+          }
+          
+          
+          VPtFrDecHead->FirstDataW16Pos = ViW16CurHead + 8;
+          
+          // Result fields not calculated now
+          
+          VPtFrDecHead->Errors          = 0;
+          VPtFrDecHead->NoTrailer       = 0;  // 08/06/2021
+          VPtFrDecHead->Truncated       = 0;  // 09/06/2021
+          VPtFrDecHead->FrDataSzW16     = 0;
+          VPtFrDecHead->RegionNb        = 0;
+          VPtFrDecHead->FiredPixNb      = 0;
+          VPtFrDecHead->MSisFrTrail.W16 = 0;
+          VPtFrDecHead->CheckSum        = 0;
+          VPtFrDecHead->ATrigPosW16[0]  = 0;
+          VPtFrDecHead->ATrigPosW16[MIS1__BT_FR_DEC_MAX_TRIG_NB - 1] = 0;
+          
+          
+          if ( VPrintLvlAbs >= 2 ) {
+            msg (( MSG_OUT, "FrCnt = %d", VPtFrDecHead->FrCnt ));
+          }
+          
+          // Processing frame
+          
+          
+          
+          // Scan frame
+          
+          while (1) {
+            
+            VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+            ViW16++;
+            
+            // Detects region
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFD00  ) {
+              VRegCntInFr++;
+              VRegCntInAcq++;
+              
+              if ( VPrintLvlAbs >= 2 ) {
+                msg (( MSG_OUT, "FrCnt = %d - Region", VPtFrDecHead->FrCnt ));
+              }
+              
+            }
+            
+            
+            // Detects trailer
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFF00 ) {
+              
+              VTrailerDetected = 1;
+              
+              VPtFrDecHead->MSisFrTrail.W16 = VSrcW16;
+              
+              if ( VPtFrDecHead->MSisFrTrail.F.Flags != 0 ) {
+                ++VFrOvfFlagsCnt;
+                msg (( MSG_OUT, "AcqId = %.3d, Fr = %.4d : Trailer flas <> 0 : FrOvf = %d, RegOvf = %d, SRegOvf = %d, FSLimit = %d", PtSrc->AcqId, VPtFrDecHead->FrId, VPtFrDecHead->MSisFrTrail.B.FrOvf, VPtFrDecHead->MSisFrTrail.B.RegOvf, VPtFrDecHead->MSisFrTrail.B.SRegOvf, VPtFrDecHead->MSisFrTrail.B.FSLimit ));
+              }
+              
+              if ( 1 /* VPrintLvlAbs >= 1 */ ) {
+                
+                if ( (VSrcW16 & 0x00FF) != 0 ) {
+                  msg (( MSG_OUT, "$$$$$$$$$$$$$$$$$$$$ OVF : MSis[%d] Fr No %.3d MSisFrCnt = %.6d - Trailer = %X", MSisId, VFrCnt, VPtFrDecHead->FrCnt, VSrcW16 ));
+                }
+                
+              }
+              
+              
+              // Calc fr data size
+                            
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+
+              if ( VDbgPrintFrDataSz ) {
+                VDbgSumAllFrDataSz += VPtFrDecHead->FrDataSzW16;
+                err_error (( ERR_OUT, "Decode : AcqId = %.4d MSisId = %d, FrId = %.4d, DataSz = %d W16, FrCnt = %u", PtSrc->AcqId, MSisId, VPtFrDecHead->FrId, VPtFrDecHead->FrDataSzW16, VPtFrDecHead->FrCnt ));
+              }
+              
+
+              // Reads checksum
+              
+              VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+              ViW16++;
+              
+              VPtFrDecHead->CheckSum = VSrcW16;             
+              
+              if ( VPrintLvlAbs >= 2 ) {
+                msg (( MSG_OUT, "Fr No %.3d MSisFrCnt = %.6d - Trailer", VFrCnt, VPtFrDecHead->FrCnt ));
+              }
+              
+            }
+            
+            // Detects header => frame without trailer at the end
+            
+            if (  (VSrcW16 & 0xFF00) == 0xFE00 ) {
+              
+              if ( VFrCnt >= PtSrc->FrNb ) {
+                err_error (( ERR_OUT, "WARNING fr > acq fr nb => !!!!!!!!!!!!!! FR = %d NO TRAILER !!!!!!!!!!!!!!!!!!!!", VFrCnt ));
+              }
+              
+              else {
+                err_error (( ERR_OUT, "ERROR fr in acq fr nb => !!!!!!!!!!!!!! FR = %d NO TRAILER !!!!!!!!!!!!!!!!!!!!", VFrCnt ));
+              }
+              
+              
+              
+              if ( PrintLvl < 0 ) {
+                msg (( MSG_OUT, "!!!!!!!!!!!!!! FR = %d NO TRAILER - A !!!!!!!!!!!!!!!!!!!!", VFrCnt ));
+              }
+              
+              VFrWithoutTrailer = 1;
+              VFrWithoutTrailerCnt++;
+              VPtFrDecHead->NoTrailer = 1;  // 08/06/2021
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+            }
+            
+            // Frame is too long : Decoding bug or MSis 1 side bug or unknown info / MSis 1 data stream
+            
+            if ( ViW16 >= VW16Nb  ) {
+              VFrTooLong = 1;
+              
+              VPtFrDecHead->Truncated = 1;  // 09/06/2021
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+              
+              if ( PrintLvl < 0 ) {
+                msg (( MSG_OUT, "!!!!!!!!!!!!!! FR = %d IS TOO LONG !!!!!!!!!!!!!!!!!!!!", VFrCnt ));
+                err_error (( ERR_OUT, "%s", MSG_OUT ));
+              }
+              
+              
+            }
+            
+            
+            VFrEnd = VTrailerDetected || VFrWithoutTrailer || VFrTooLong;
+            
+            // Pixel detected : Current W16 is not a region header, an empty W16 and is not an end of frame tag
+            
+            if ( (VFrEnd == 0) && ((VSrcW16 & 0xFF00) != 0xFD00) && (VSrcW16 != 0xFCAA) ) {
+              VPixCntInFr++;
+              VPixCntInAcq++;
+            }
+            
+            
+            // End of frame => Update frame header info
+            
+            if ( VFrEnd ) {
+              
+              VPtFrDecHead->Errors          = 0;                              // Not handled now 25/05/2021
+              VPtFrDecHead->ATrigPosW16[0]  = 0;                              // Not handled now 25/05/2021
+              VPtFrDecHead->ATrigPosW16[MIS1__BT_FR_DEC_MAX_TRIG_NB - 1] = 0; // Not handled now 25/05/2021
+              
+              // VPtFrDecHead->FrDataSzW16     = 0; // Calculated before
+              // VPtFrDecHead->MSisFrTrail.W16 = 0; // Calculated before
+              // VPtFrDecHead->CheckSum        = 0; // Calculated before
+              
+              VPtFrDecHead->RegionNb        = VRegCntInFr;
+              VPtFrDecHead->FiredPixNb      = VPixCntInFr;
+              
+              // Frame too long => Exits on error
+              // No time now to handle it in a better way => TBD later
+              // Upgraded on 29/05/2021
+              // If it is the last frame of Acq => Warning, because the frame is probably only cut
+              // If it is NOT the last frame of Acq => Error because it should not happne => There is a problem
+              
+              if ( VFrTooLong ) {
+                
+                if ( PrintLvl <  0 ) {
+                  msg (( MSG_OUT, "*********************** ACQ %d MSis = %d FR %d TOO LONG = %d W16, VW16Nb = %d ******************************", PtDest->AcqId, MSisId, VFrCnt, VPtFrDecHead->FrDataSzW16, VW16Nb  ));
+                }
+                
+                err_error (( ERR_OUT, "WARNING : Stop frame processing max W16 nb = %d reached => AcqId = %.4d, MSisID = %d : VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, PtSrc->AcqId, MSisId, VFrCnt, PtSrc->FrNb ));
+            
+                PtDest->ResAFrNbTrunc[MSisId]++; // Update truncated frames counter - 30/05/2021
+                
+                MIS1__BT_VGDecodecFrWarnErr++;
+                
+                if ( VFrCnt >= PtSrc->FrNb ) {
+                  VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC_LAST_FR;
+                  // err_warning (( ERR_OUT, "Stop frame processing max W16 nb = %d reached => VFrCnt = %d >= FrNbInAcq = %d => Last frame cut", VW16Nb, VFrCnt, PtSrc->FrNb ));
+                }
+                
+                else {
+                  
+                  VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC;
+                  
+                  err_error (( ERR_OUT, "ERROR : Stop frame processing max W16 nb = %d reached => AcqId = %.4d , MSisID = %d : VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, PtSrc->AcqId, MSisId, VFrCnt, PtSrc->FrNb ));
+                  
+                  // return (-2);  // 10/10/2021 return (-2), before it was return (-1)
+                  
+                  // Since 11/10/2021
+                  
+                  VRetOk = -2;
+                  break;
+                }
+                
+              } // End if ( VFrTooLong )
+              
+              // Normal end of frame => break frame decoding loop
+              
+              break;
+            }
+            
+          } // End while (1) frame scanning
+          
+          
+          VPtFrDecHead++;
+          
+        }
+        
+        // Fake header
+        
+        else {
+          
+          VFakeHdCnt++;
+          
+          if ( VPrintLvlAbs >= 1  ) {
+            msg (( MSG_OUT, "Fake header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFakeHdCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
+          }
+          
+        }
+        
+        
+      } // End frame processing
+      
+      
+    } // End for
+    
+    
+    // Update results
+    
+    PtDest->ParFrNbInSrcAcq           = PtSrc->FrNb;
+    
+    
+    PtDest->ResAFrNb[MSisId]          = VFrCnt;
+    PtDest->ResAFrNbWoTrailer[MSisId] = VFrWithoutTrailerCnt;
+    PtDest->ResAFrFakeHeadCnt[MSisId] = VFakeHdCnt;
+    PtDest->ResARegNb[MSisId]         = VRegCntInAcq;
+    PtDest->ResAPixNb[MSisId]         = VPixCntInAcq;
+    PtDest->ResAFrNbOvfFlags[MSisId]  = VFrOvfFlagsCnt;
+    
+    
+    if ( (VFrCnt == 0) || (VFakeHdCnt > 0) ) {
+      err_error (( ERR_OUT, "Error : VFrCnt = %d, VFakeHdCnt = %d", VFrCnt, VFakeHdCnt ));
+      VRetOk = -1;
+    }
+    
+    
+    if ( VDbgPrintFrDataSz ) {
+      err_error (( ERR_OUT, "" ));
+      err_error (( ERR_OUT, "Decode : AcqId = %.4d MSisId = %d, Total sz = %d W16", PtSrc->AcqId, MSisId, VDbgSumAllFrDataSz ));
+      err_error (( ERR_OUT, "" ));
+      err_error (( ERR_OUT, "" ));
+    }
+    
+    
+    
+    if ( VPrintLvlAbs  ) {
+      
+      msg (( MSG_OUT, "" ));
+      msg (( MSG_OUT, "AcqId = %.4d, MSisId = %d", PtSrc->AcqId, MSisId ));
+      msg (( MSG_OUT, "" ));
+      msg (( MSG_OUT, "%d frames found, %d fake headers found, %d frames with OVF flags", VFrCnt, VFakeHdCnt, VFrOvfFlagsCnt ));
+      msg (( MSG_OUT, "ViW16 = %d", ViW16 ));
+      
+      msg (( MSG_OUT, "" ));
+    }
+    
+    
+    if ( VDataAfterTrailer ) {
+      msg (( MSG_OUT, "" ));
+      msg (( MSG_OUT, "!!!!!!!!!!!!!! AcqId = %.4d : %d Data W16  after trailer !!!!!!!!!!!!!!", PtSrc->AcqId, VDataAfterTrailerNb ));
+    }
+    
+    
+    if ( VFrOvfFlagsCnt != 0 ) {
+      msg (( MSG_OUT, "" ));
+      msg (( MSG_OUT, "WARNING !!!!!!!!!!!!!!!!!!!!! AcqId = %.4d, MSisId = %d => %d frames with OVF bit(s) set", PtSrc->AcqId, MSisId, VFrOvfFlagsCnt ));
+      msg (( MSG_OUT, "" ));
+    }
+    
+    
+    #ifndef CC_NOT_CPP_BUILDER
+    
+    if ( MeasExecTime ) {
+      VExecTimeUs = TIME__FMeasTimeUsEnd ( 0 /* Index */ );
+    }
+    
+    else {
+      VExecTimeUs = 0;
+    }
+    
+    #else
+    
+    // You can implement here exec tiome measurement for compiler <> C++ Builder
+    
+    VExecTimeUs = 0; // No exec time measurement implementation => Returns 0
+    
+    
+    #endif
+    
+    
+    // Before 11/10/2021 // return (VExecTimeUs * VRetOk );
+    
+    // Since 11/10/2021
+    
+    if ( VRetOk < 0 ) {
+      return ( VRetOk );
+    }
+    
+    
+    return (VExecTimeUs);
+  }
+  
+  
+
+
 /* DOC_FUNC_BEGIN */
 /**
 ===================================================================================
-* \fn      : double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, UInt8 PrintLvl )
+* \fn      : double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl )
 *
 * \brief   : Decode the frames for one MSis 1 : List frames, exytract fr header, fr cnt but NO PIXELS DECODING  \n
 *
@@ -20784,6 +21645,12 @@ SInt32 MIS1__BT_FBtDecodeFrGetWarnErr ( UInt8 Reset ) {
 *          :
 * \date    : Date      : 24/05/2021
 * \date    : Rev       : 25/05/2021
+* \date    : Rev       : 08/06/2021 - NoTrailer field update
+* \date    : Rev       : 08/06/2021 - Truncated field update
+* \date    : Rev       : 11/10/2021 
+*          :             - PrintLvl => SInt8, Use < 0 print level to print also "Frame too long messages", "Data after trailer"
+*          :             - In case of frame too long and fr no < param FrNb => return -2, before it was returning -1
+*          :            
 * \date    : Doc date  : 24/05/2021
 * \author  : Name      : Gilles CLAUS
 * \author  : E-mail    : gilles.claus@iphc.cnrs.fr
@@ -20793,10 +21660,62 @@ SInt32 MIS1__BT_FBtDecodeFrGetWarnErr ( UInt8 Reset ) {
 */
 /* DOC_FUNC_END */
 
+// 14/10/2021
+//
+// Returns frames number decoded without error for ALL MSis 1 for last call of
+// - MIS1__BT_FBtDecodeFrLight (...)
+// - MIS1__BT_FBtDecodeFr (...)
+//
+//
+// - To get ok fr nb of one MSis => MIS1__BT_FBtDecodeFrGetOkFrNb ( 0..5, -1 )
+// - To get minimum ok fr nb of N x MSis => MIS1__BT_FBtDecodeFrGetOkFrNb ( -1, N )
 
-double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, UInt8 PrintLvl ) {
 
+SInt32 MIS1__BT_FBtDecodeFrGetOkFrNb ( SInt8 MSisId, SInt8 MSisNb ) {
+  
+  SInt32 VMinOkFrNb;
+  SInt8  ViMSis;
+  
+  if ( MSisId >= 0) {
+    
+    msg (( MSG_OUT, "MIS1__BT_FBtDecodeFrGetOkFrNb (MSisId=%d) = %d", MIS1__VGADecodeFrOkFrNb[MSisId] ));
+    
+    return ( MIS1__VGADecodeFrOkFrNb[MSisId] );
+    
+  }
+  
+  // Search min  
+  
+  VMinOkFrNb = MIS1__VGADecodeFrOkFrNb[0];
+  
+  for ( ViMSis = 1; ViMSis < MSisNb; ViMSis++ ) {
+    
+    if ( MIS1__VGADecodeFrOkFrNb[ViMSis] < VMinOkFrNb ) {
+      VMinOkFrNb = MIS1__VGADecodeFrOkFrNb[ViMSis];
+    }
+    
+  }
+  
+  msg (( MSG_OUT, "MIS1__BT_FBtDecodeFrGetOkFrNb (Min) = %d", VMinOkFrNb ));
+    
+  return (VMinOkFrNb);
+  
+}
+
+// Function to use when debugging will be finished
+
+
+
+
+
+double MIS1__BT_FBtDecodeFrLight_new ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl ) {
+  
+  static UInt8 VEmulFrNoTrail = 0;
+  
   SInt32      VRetOk;
+  
+  SInt8       VPrintLvlAbs;
+  
   double      VExecTimeUs;
   
   SInt32      VSrcW16;    // W16 to convert
@@ -20808,7 +21727,585 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
   SInt32      VFakeHdCnt; // Counter of fake headers => first W16 is header tag but not following 7 W16
   SInt32      VFrWithoutTrailerCnt; // Counter of frames without trailer
   SInt32      ViW16CurHead; // First W16 of current header
+  SInt32      VFrOvfFlagsCnt; // Counter of frames with at leats one OVF flag set 09/10/2021
   
+  
+  TW128As8W16 VFrHd;   // Frame header (128 bits)
+  UInt16      VFrHdW0; // Frame header W0
+  UInt16      VFrHdW1; // Frame header W1
+  UInt16      VFrHdW2; // Frame header W2
+  UInt16      VFrHdW3; // Frame header W3
+  UInt16      VFrHdW4; // Frame header W4
+  UInt16      VFrHdW5; // Frame header W5
+  UInt16      VFrHdW6; // Frame header W6
+  UInt16      VFrHdW7; // Frame header W7
+  
+  
+  
+  SInt32      VRegCntInFr;        // Counter of regiosn in frame
+  SInt32      VRegCntInAcq;       // Counter of regiosn in Acq
+  SInt32      VPixCntInFr;        // Counter of pixels in each frame
+  SInt32      VPixCntInAcq;       // Counter of pixels in Acq
+  
+  // Flags
+  
+  UInt8       VFrWithoutTrailer;  // Flag to handle frames without a trailer at the end, a header can starts
+  UInt8       VTrailerDetected;   // Flag => trailer detected in current frame scanning
+  UInt8       VFrTooLong;         // Flag => frame length > max possible
+  UInt8       VFrEnd;             // Flag => end of frame = OR of previous flags
+  UInt8       VDataAfterTrailer;  // Flag => Data dtectedt after frame trailer
+  
+  SInt32      VDataAfterTrailerNb; // Counter of data after trailer
+  
+  
+  MIS1__TBtFrDecHead* VPtFrDecHead;
+  
+  
+  VPrintLvlAbs = abs ( PrintLvl );
+  
+  
+  // Check param
+  
+  // ----------------------------------------------
+  // WARNING
+  // ----------------------------------------------
+  //
+  // NO parameters checking to save execution time, it is done in ...
+  // => This function SHOULD not be called directly, but only via ...
+  // => In case you need to call it directly => Check parameters you provide
+  
+  // Measure exec time
+  
+  #ifndef CC_NOT_CPP_BUILDER
+  
+  if ( MeasExecTime ) {
+    TIME__FMeasTimeUsBegin ( 0 /* Index */ );
+  }
+  
+  
+  #else
+  
+  // You can implement here exec tiome measurement for compiler <> C++ Builder
+  
+  
+  #endif
+  
+  // Propagates AcqId and Triggers nb
+  
+  PtDest->AcqId  = PtSrc->AcqId;
+  PtDest->TrigNb = PtSrc->AcqRawHead.Trigs.TrigNb; // Added on 30/05/2021
+  
+  
+  // Init var
+  
+  VRetOk       = 1;
+  
+  VW16Nb       = PtSrc->MSisW16Nb;
+  ViW16CurHead = 0;
+  VFrCnt       = 0;
+  VFakeHdCnt   = 0;
+  VFrWithoutTrailerCnt = 0;
+  
+  VFrOvfFlagsCnt       = 0;
+  
+  
+  VFrWithoutTrailer = 0;
+  VTrailerDetected  = 0;
+  VFrTooLong        = 0;
+  VFrEnd            = 0;
+  VDataAfterTrailer = 0;
+  
+  
+  VRegCntInFr  = 0;
+  VPixCntInFr  = 0;
+  VRegCntInAcq = 0;
+  VPixCntInAcq = 0;
+  
+  VDataAfterTrailerNb = 0;
+  
+  
+  VPtFrDecHead = &PtDest->ResAAFrHead[MSisId][0];
+  
+  // Reset frames truncated & errors counters - 30/05/2021
+  
+  PtDest->ResAFrNbTrunc[MSisId]     = 0;
+  PtDest->ResAFrNbErr[MSisId]       = 0;
+  
+  // Reset decoding function warnings + errors counter - 30/05/2021
+  
+  MIS1__BT_VGDecodecFrWarnErr = 0;
+  
+  
+  MIS1__VGADecodeFrOkFrNb[MSisId] = 0;
+  
+  
+  // -------------------------------------------------------------
+  // Frames decoding
+  // -------------------------------------------------------------
+  
+  
+  if ( VPrintLvlAbs ) {
+    msg (( MSG_OUT, "Decode MSis No %d, Src frame = %d W16", MSisId, VW16Nb ));
+  }
+  
+  
+  for ( ViW16 = 0; ViW16 < VW16Nb;  ) {
+    
+    // Try to handle frames without trailer
+    //  - the first header field (W0) has already been detected at end of previous frame, don't read it again it is already here
+    
+    if ( VFrWithoutTrailer == 0 ) {
+      VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+    }
+    
+    // Check if there are data after the trailer
+    
+    if ( ((VSrcW16 & 0xFF00) != 0xFE00) && (VSrcW16 != 0xFCAA) ) {
+      VDataAfterTrailer = 1;
+      VDataAfterTrailerNb++;
+      
+      if ( PrintLvl < 0 ) {
+        msg (( MSG_OUT, "MSis[%d] Fr = %.4d : DATA[iW16 = %.4d] = %X, ", MSisId, VFrCnt, ViW16, VSrcW16 ));
+      }
+      
+    }
+    
+    
+    // Detects first W16, W0 of a frame header
+    
+    if ( (VSrcW16 & 0xFF00) == 0xFE00 ) {
+      
+      ViW16CurHead = ViW16 - 1;
+      
+      VFrHdW0 = VSrcW16;
+      
+      // Checks that next 7 are also frame header tags
+      
+      VFrHdW1 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW2 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW3 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW4 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW5 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW6 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW7 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      
+      // Header confirmed
+      
+      // if ( 1 ) {
+        
+        if ( ((VFrHdW1 & 0xFF00) == 0xFE00) && ((VFrHdW2 & 0xFF00) == 0xFE00) && ((VFrHdW3 & 0xFF00) == 0xFE00) && ((VFrHdW4 & 0xFF00) == 0xFE00) && ((VFrHdW5 & 0xFF00) == 0xFE00) && ((VFrHdW6 & 0xFF00) == 0xFE00) && ((VFrHdW7 & 0xFF00) == 0xFE00)  ) {
+          
+          // Reset regions cnt, fired pixels cnt, flags
+          
+          VRegCntInFr       = 0;
+          VPixCntInFr       = 0;
+          
+          VFrWithoutTrailer = 0;
+          VTrailerDetected  = 0;
+          VFrTooLong        = 0;
+          VFrEnd            = 0;
+          
+          
+          // Update frame header results
+          
+          VPtFrDecHead->MSisId = MSisId;
+          VPtFrDecHead->FrId   = VFrCnt;
+          
+          VFrCnt++;
+          
+          // Extract header
+          
+          VPtFrDecHead->MSisFrHead.AW16[0] = VFrHdW0;
+          VPtFrDecHead->MSisFrHead.AW16[1] = VFrHdW1;
+          VPtFrDecHead->MSisFrHead.AW16[2] = VFrHdW2;
+          VPtFrDecHead->MSisFrHead.AW16[3] = VFrHdW3;
+          VPtFrDecHead->MSisFrHead.AW16[4] = VFrHdW4;
+          VPtFrDecHead->MSisFrHead.AW16[5] = VFrHdW5;
+          VPtFrDecHead->MSisFrHead.AW16[6] = VFrHdW6;
+          VPtFrDecHead->MSisFrHead.AW16[7] = VFrHdW7;
+          
+          // Extract frames counter
+          
+          VPtFrDecHead->FrCnt = (VFrHdW0 &0xFF) + ((VFrHdW1 & 0xFF) << 8) + ((VFrHdW2 & 0xFF) << 16) + ((VFrHdW3 & 0xFF) << 24);
+          
+          if ( VPrintLvlAbs >= 2  ) {
+            msg (( MSG_OUT, "Header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFrCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
+          }
+          
+          
+          VPtFrDecHead->FirstDataW16Pos = ViW16CurHead + 8;
+          
+          // Result fields not calculated now
+          
+          VPtFrDecHead->Errors          = 0;
+          VPtFrDecHead->NoTrailer       = 0;  // 08/06/2021
+          VPtFrDecHead->Truncated       = 0;  // 09/06/2021
+          VPtFrDecHead->FrDataSzW16     = 0;
+          VPtFrDecHead->RegionNb        = 0;
+          VPtFrDecHead->FiredPixNb      = 0;
+          VPtFrDecHead->MSisFrTrail.W16 = 0;
+          VPtFrDecHead->CheckSum        = 0;
+          VPtFrDecHead->ATrigPosW16[0]  = 0;
+          VPtFrDecHead->ATrigPosW16[MIS1__BT_FR_DEC_MAX_TRIG_NB - 1] = 0;
+          
+          
+          if ( VPrintLvlAbs >= 2 ) {
+            msg (( MSG_OUT, "FrCnt = %d", VPtFrDecHead->FrCnt ));
+          }
+          
+          // Processing frame
+          
+          
+          
+          // Scan frame
+          
+          while (1) {
+            
+            VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+            ViW16++;
+            
+            // Detects region
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFD00  ) {
+              VRegCntInFr++;
+              VRegCntInAcq++;
+              
+              if ( VPrintLvlAbs >= 2 ) {
+                msg (( MSG_OUT, "FrCnt = %d - Region", VPtFrDecHead->FrCnt ));
+              }
+              
+            }
+            
+            
+            // Detects trailer
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFF00 ) {
+              
+              VTrailerDetected = 1;
+              
+              VPtFrDecHead->MSisFrTrail.W16 = VSrcW16;
+              
+              if ( VPtFrDecHead->MSisFrTrail.F.Flags != 0 ) {
+                ++VFrOvfFlagsCnt;
+                msg (( MSG_OUT, "AcqId = %.3d, Fr = %.4d : Trailer flas <> 0 : FrOvf = %d, RegOvf = %d, SRegOvf = %d, FSLimit = %d", PtSrc->AcqId, VPtFrDecHead->FrId, VPtFrDecHead->MSisFrTrail.B.FrOvf, VPtFrDecHead->MSisFrTrail.B.RegOvf, VPtFrDecHead->MSisFrTrail.B.SRegOvf, VPtFrDecHead->MSisFrTrail.B.FSLimit ));
+              }
+              
+              if ( 1 /* VPrintLvlAbs >= 1 */ ) {
+                
+                if ( (VSrcW16 & 0x00FF) != 0 ) {
+                  msg (( MSG_OUT, "$$$$$$$$$$$$$$$$$$$$ OVF : MSis[%d] Fr No %.3d MSisFrCnt = %.6d - Trailer = %X", MSisId, VFrCnt, VPtFrDecHead->FrCnt, VSrcW16 ));
+                }
+                
+              }
+              
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+              
+              // Reads checksum
+              
+              VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+              ViW16++;
+              
+              VPtFrDecHead->CheckSum = VSrcW16;
+              
+              
+              if ( VPrintLvlAbs >= 2 ) {
+                msg (( MSG_OUT, "Fr No %.3d MSisFrCnt = %.6d - Trailer", VFrCnt, VPtFrDecHead->FrCnt ));
+              }
+              
+            }
+            
+            // Detects header => frame without trailer at the end
+            
+            if (  (VSrcW16 & 0xFF00) == 0xFE00 ) {
+              
+              if ( VFrCnt >= PtSrc->FrNb ) {
+                err_error (( ERR_OUT, "WARNING fr > acq fr nb => !!!!!!!!!!!!!! FR = %d NO TRAILER !!!!!!!!!!!!!!!!!!!!", VFrCnt ));
+              }
+              
+              else {
+                err_error (( ERR_OUT, "ERROR fr in acq fr nb => !!!!!!!!!!!!!! FR = %d NO TRAILER !!!!!!!!!!!!!!!!!!!!", VFrCnt ));
+              }
+              
+              
+              
+              if ( PrintLvl < 0 ) {
+                msg (( MSG_OUT, "!!!!!!!!!!!!!! FR = %d NO TRAILER - A !!!!!!!!!!!!!!!!!!!!", VFrCnt ));
+              }
+              
+              VFrWithoutTrailer = 1;
+              VFrWithoutTrailerCnt++;
+              VPtFrDecHead->NoTrailer = 1;  // 08/06/2021
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+            }
+            
+            // Frame is too long : Decoding bug or MSis 1 side bug or unknown info / MSis 1 data stream
+            
+            if ( ViW16 >= VW16Nb  ) {
+              VFrTooLong = 1;
+              
+              VPtFrDecHead->Truncated = 1;  // 09/06/2021
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC;
+              
+              // Before 11/10/2021
+              
+              #ifdef MIS1__CC_DECODE_FR_STRICT
+                err_error (( ERR_OUT, "ERROR : Stop frame processing max W16 nb = %d reached => VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, VFrCnt, PtSrc->FrNb ));
+                return (-2);  // 10/10/2021 return (-2), before it was return (-1)
+                
+              // Since 11/10/2021
+                
+              #else
+                err_error (( ERR_OUT, "WARNING : Stop frame processing max W16 nb = %d reached => VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, VFrCnt, PtSrc->FrNb ));
+                VRetOk = -2;
+                break;
+              #endif
+              
+              
+              // WARNING 14/10/2021 !!!!!!!!!!!
+              //
+              // => Checked if this code is useful or if it can be removed
+              // Now it will be never executed
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+              
+              if ( PrintLvl < 0 ) {
+                msg (( MSG_OUT, "!!!!!!!!!!!!!! FR = %d IS TOO LONG !!!!!!!!!!!!!!!!!!!!", VFrCnt ));
+                err_error (( ERR_OUT, "%s", MSG_OUT ));
+              }
+              
+              
+            }
+            
+            
+            VFrEnd = VTrailerDetected || VFrWithoutTrailer || VFrTooLong;
+            
+            // Pixel detected : Current W16 is not a region header, an empty W16 and is not an end of frame tag
+            
+            if ( (VFrEnd == 0) && ((VSrcW16 & 0xFF00) != 0xFD00) && (VSrcW16 != 0xFCAA) ) {
+              VPixCntInFr++;
+              VPixCntInAcq++;
+            }
+            
+            
+            // End of frame => Update frame header info
+            
+            if ( VFrEnd ) {
+              
+              VPtFrDecHead->Errors          = 0;                              // Not handled now 25/05/2021
+              VPtFrDecHead->ATrigPosW16[0]  = 0;                              // Not handled now 25/05/2021
+              VPtFrDecHead->ATrigPosW16[MIS1__BT_FR_DEC_MAX_TRIG_NB - 1] = 0; // Not handled now 25/05/2021
+              
+              // VPtFrDecHead->FrDataSzW16     = 0; // Calculated before
+              // VPtFrDecHead->MSisFrTrail.W16 = 0; // Calculated before
+              // VPtFrDecHead->CheckSum        = 0; // Calculated before
+              
+              VPtFrDecHead->RegionNb        = VRegCntInFr;
+              VPtFrDecHead->FiredPixNb      = VPixCntInFr;
+              
+              // Frame too long => Exits on error
+              // No time now to handle it in a better way => TBD later
+              // Upgraded on 29/05/2021
+              // If it is the last frame of Acq => Warning, because the frame is probably only cut
+              // If it is NOT the last frame of Acq => Error because it should not happne => There is a problem
+              
+              if ( VFrTooLong ) {
+                
+                if ( PrintLvl <  0 ) {
+                  msg (( MSG_OUT, "*********************** ACQ %d MSis = %d FR %d TOO LONG = %d W16, VW16Nb = %d ******************************", PtDest->AcqId, MSisId, VFrCnt, VPtFrDecHead->FrDataSzW16, VW16Nb  ));
+                }
+                
+                err_error (( ERR_OUT, "WARNING : Stop frame processing max W16 nb = %d reached => AcqId = %.4d, MSisID = %d : VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, PtSrc->AcqId, MSisId, VFrCnt, PtSrc->FrNb ));
+                
+                PtDest->ResAFrNbTrunc[MSisId]++; // Update truncated frames counter - 30/05/2021
+                
+                MIS1__BT_VGDecodecFrWarnErr++;
+                
+                if ( VFrCnt >= PtSrc->FrNb ) {
+                                    
+                  VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC_LAST_FR;
+                  // err_warning (( ERR_OUT, "Stop frame processing max W16 nb = %d reached => VFrCnt = %d >= FrNbInAcq = %d => Last frame cut, set VFrCnt = %d ", VW16Nb, VFrCnt, PtSrc->FrNb, PtSrc->FrNb ));
+                  
+                  VFrCnt  = PtSrc->FrNb;  // 14/10/2021
+                  break;                  // 14/10/2021
+                  
+                }
+                
+                else {
+                  
+                  VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC;
+                  
+                  err_error (( ERR_OUT, "ERROR : Stop frame processing max W16 nb = %d reached => AcqId = %.4d , MSisID = %d : VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, PtSrc->AcqId, MSisId, VFrCnt, PtSrc->FrNb ));
+                  
+                  // return (-2);  // 10/10/2021 return (-2), before it was return (-1)
+                  
+                  // Since 11/10/2021 AND before 14/10/2021
+                  // VRetOk = -2;
+                  // break;
+                  
+                  // Since 14/10/2021
+
+                  VRetOk                 = -2;      // 14/10/2021
+                  break;                            // 14/10/2021
+                  
+                }
+                
+              } // End if ( VFrTooLong )
+              
+              // Normal end of frame => break frame decoding loop
+              
+              break;
+            }
+            
+          } // End while (1) frame scanning
+          
+          
+          VPtFrDecHead++;
+          
+        }
+        
+        // Fake header
+        
+        else {
+          
+          VFakeHdCnt++;
+          
+          if ( VPrintLvlAbs >= 1  ) {
+            msg (( MSG_OUT, "Fake header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFakeHdCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
+          }
+          
+        }
+        
+        
+      } // End frame processing
+      
+      
+    } // End for
+    
+    
+    // Update results
+    
+    PtDest->ParFrNbInSrcAcq           = PtSrc->FrNb;
+    
+    
+    PtDest->ResAFrNb[MSisId]          = VFrCnt;
+    PtDest->ResAFrNbWoTrailer[MSisId] = VFrWithoutTrailerCnt;
+    PtDest->ResAFrFakeHeadCnt[MSisId] = VFakeHdCnt;
+    PtDest->ResARegNb[MSisId]         = VRegCntInAcq;
+    PtDest->ResAPixNb[MSisId]         = VPixCntInAcq;
+    PtDest->ResAFrNbOvfFlags[MSisId]  = VFrOvfFlagsCnt;
+    
+    MIS1__VGADecodeFrOkFrNb[MSisId]   = VFrCnt;
+    
+    
+    if ( (VFrCnt == 0) || (VFakeHdCnt > 0) ) {
+      err_error (( ERR_OUT, "Error : VFrCnt = %d, VFakeHdCnt = %d", VFrCnt, VFakeHdCnt ));
+      VRetOk = -1;
+    }
+    
+    
+    if ( VPrintLvlAbs  ) {
+      
+      msg (( MSG_OUT, "" ));
+      msg (( MSG_OUT, "AcqId = %.4d, MSisId = %d", PtSrc->AcqId, MSisId ));
+      msg (( MSG_OUT, "" ));
+      msg (( MSG_OUT, "%d frames found, %d fake headers found, %d frames with OVF flags", VFrCnt, VFakeHdCnt, VFrOvfFlagsCnt ));
+      msg (( MSG_OUT, "ViW16 = %d", ViW16 ));
+      
+      msg (( MSG_OUT, "" ));
+    }
+    
+    
+    if ( VDataAfterTrailer ) {
+      msg (( MSG_OUT, "" ));
+      msg (( MSG_OUT, "!!!!!!!!!!!!!! AcqId = %.4d : %d Data W16  after trailer !!!!!!!!!!!!!!", PtSrc->AcqId, VDataAfterTrailerNb ));
+    }
+    
+    
+    if ( VFrOvfFlagsCnt != 0 ) {
+      msg (( MSG_OUT, "" ));
+      msg (( MSG_OUT, "WARNING !!!!!!!!!!!!!!!!!!!!! AcqId = %.4d, MSisId = %d => %d frames with OVF bit(s) set", PtSrc->AcqId, MSisId, VFrOvfFlagsCnt ));
+      msg (( MSG_OUT, "" ));
+    }
+    
+    
+    #ifndef CC_NOT_CPP_BUILDER
+    
+    if ( MeasExecTime ) {
+      VExecTimeUs = TIME__FMeasTimeUsEnd ( 0 /* Index */ );
+    }
+    
+    else {
+      VExecTimeUs = 0;
+    }
+    
+    #else
+    
+    // You can implement here exec tiome measurement for compiler <> C++ Builder
+    
+    VExecTimeUs = 0; // No exec time measurement implementation => Returns 0
+    
+    
+    #endif
+    
+    
+    // Before 11/10/2021 // return (VExecTimeUs * VRetOk );
+    
+    // Since 11/10/2021
+    
+    if ( VRetOk < 0 ) {
+      return ( VRetOk );
+    }
+    
+    
+  return (VExecTimeUs);
+}
+  
+  
+  
+
+
+
+
+
+// -----------
+
+double MIS1__BT_FBtDecodeFrLight__before_141021 ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl ) {
+
+  static UInt8 VEmulFrNoTrail = 0;
+
+  SInt32      VRetOk;
+  
+  SInt8       VPrintLvlAbs;
+  
+  double      VExecTimeUs;
+  
+  SInt32      VSrcW16;    // W16 to convert
+  // UInt16*     VPtSrcW16;  // Pointer to W16 to convert
+  
+  UInt32      VW16Nb;     // Total W16 nb to process for this MSis 1
+  SInt32      ViW16;      // Index of W16 processed
+  SInt32      VFrCnt;     // Counter of detected frames = counter of MSis 1 frame headers in data stream
+  SInt32      VFakeHdCnt; // Counter of fake headers => first W16 is header tag but not following 7 W16
+  SInt32      VFrWithoutTrailerCnt; // Counter of frames without trailer
+  SInt32      ViW16CurHead; // First W16 of current header
+  SInt32      VFrOvfFlagsCnt; // Counter of frames with at leats one OVF flag set 09/10/2021
   
   
   TW128As8W16 VFrHd;   // Frame header (128 bits)
@@ -20833,11 +22330,16 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
   UInt8       VFrWithoutTrailer;  // Flag to handle frames without a trailer at the end, a header can starts
   UInt8       VTrailerDetected;   // Flag => trailer detected in current frame scanning
   UInt8       VFrTooLong;         // Flag => frame length > max possible
-  UInt8       VFrEnd;             // Flag => end of frame = OR of previois flags
+  UInt8       VFrEnd;             // Flag => end of frame = OR of previous flags
+  UInt8       VDataAfterTrailer;  // Flag => Data dtectedt after frame trailer
+
+  SInt32      VDataAfterTrailerNb; // Counter of data after trailer
 
 
   MIS1__TBtFrDecHead* VPtFrDecHead;
   
+
+  VPrintLvlAbs = abs ( PrintLvl );
 
 
   // Check param
@@ -20882,17 +22384,22 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
   VFakeHdCnt   = 0;
   VFrWithoutTrailerCnt = 0;
   
+  VFrOvfFlagsCnt       = 0;
+  
   
   VFrWithoutTrailer = 0;
   VTrailerDetected  = 0;
   VFrTooLong        = 0;
   VFrEnd            = 0;
+  VDataAfterTrailer = 0;
 
   
   VRegCntInFr  = 0;
   VPixCntInFr  = 0;
   VRegCntInAcq = 0;
   VPixCntInAcq = 0;
+  
+  VDataAfterTrailerNb = 0;
     
   
   VPtFrDecHead = &PtDest->ResAAFrHead[MSisId][0];
@@ -20911,7 +22418,7 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
   // -------------------------------------------------------------
   
   
-  if ( PrintLvl ) {
+  if ( VPrintLvlAbs ) {
     msg (( MSG_OUT, "Decode MSis No %d, Src frame = %d W16", MSisId, VW16Nb ));
   }
 
@@ -20925,6 +22432,19 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
       VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
       ViW16++;
     }
+
+    // Check if there are data after the trailer
+    
+    if ( ((VSrcW16 & 0xFF00) != 0xFE00) && (VSrcW16 != 0xFCAA) ) {
+      VDataAfterTrailer = 1;
+      VDataAfterTrailerNb++;
+      
+      if ( PrintLvl < 0 ) {
+        msg (( MSG_OUT, "MSis[%d] Fr = %.4d : DATA[iW16 = %.4d] = %X, ", MSisId, VFrCnt, ViW16, VSrcW16 ));
+      }    
+      
+    }
+    
 
     // Detects first W16, W0 of a frame header
     
@@ -20990,7 +22510,7 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
 
         VPtFrDecHead->FrCnt = (VFrHdW0 &0xFF) + ((VFrHdW1 & 0xFF) << 8) + ((VFrHdW2 & 0xFF) << 16) + ((VFrHdW3 & 0xFF) << 24);
 
-        if ( PrintLvl >= 2  ) {
+        if ( VPrintLvlAbs >= 2  ) {
           msg (( MSG_OUT, "Header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFrCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
         }
 
@@ -21000,6 +22520,8 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
         // Result fields not calculated now
 
         VPtFrDecHead->Errors          = 0;
+        VPtFrDecHead->NoTrailer       = 0;  // 08/06/2021
+        VPtFrDecHead->Truncated       = 0;  // 09/06/2021
         VPtFrDecHead->FrDataSzW16     = 0;
         VPtFrDecHead->RegionNb        = 0;
         VPtFrDecHead->FiredPixNb      = 0;
@@ -21009,7 +22531,7 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
         VPtFrDecHead->ATrigPosW16[MIS1__BT_FR_DEC_MAX_TRIG_NB - 1] = 0;
 
                 
-        if ( PrintLvl >= 2 ) {
+        if ( VPrintLvlAbs >= 2 ) {
           msg (( MSG_OUT, "FrCnt = %d", VPtFrDecHead->FrCnt ));
         }
         
@@ -21030,7 +22552,7 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
             VRegCntInFr++;
             VRegCntInAcq++;
             
-            if ( PrintLvl >= 2 ) {
+            if ( VPrintLvlAbs >= 2 ) {
               msg (( MSG_OUT, "FrCnt = %d - Region", VPtFrDecHead->FrCnt ));
             }            
             
@@ -21044,6 +22566,20 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
             VTrailerDetected = 1;
 
             VPtFrDecHead->MSisFrTrail.W16 = VSrcW16;
+            
+            if ( VPtFrDecHead->MSisFrTrail.F.Flags != 0 ) {
+              ++VFrOvfFlagsCnt;
+              msg (( MSG_OUT, "AcqId = %.3d, Fr = %.4d : Trailer flas <> 0 : FrOvf = %d, RegOvf = %d, SRegOvf = %d, FSLimit = %d", PtSrc->AcqId, VPtFrDecHead->FrId, VPtFrDecHead->MSisFrTrail.B.FrOvf, VPtFrDecHead->MSisFrTrail.B.RegOvf, VPtFrDecHead->MSisFrTrail.B.SRegOvf, VPtFrDecHead->MSisFrTrail.B.FSLimit ));
+            }                            
+            
+            if ( 1 /* VPrintLvlAbs >= 1 */ ) {
+              
+              if ( (VSrcW16 & 0x00FF) != 0 ) {
+                msg (( MSG_OUT, "$$$$$$$$$$$$$$$$$$$$ OVF : MSis[%d] Fr No %.3d MSisFrCnt = %.6d - Trailer = %X", MSisId, VFrCnt, VPtFrDecHead->FrCnt, VSrcW16 ));
+              }
+              
+            }
+            
 
             // Calc fr data size
 
@@ -21055,8 +22591,9 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
             ViW16++;
             
             VPtFrDecHead->CheckSum = VSrcW16;
+            
 
-            if ( PrintLvl >= 2 ) {
+            if ( VPrintLvlAbs >= 2 ) {
               msg (( MSG_OUT, "Fr No %.3d MSisFrCnt = %.6d - Trailer", VFrCnt, VPtFrDecHead->FrCnt ));
             }
 
@@ -21064,9 +22601,25 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
 
           // Detects header => frame without trailer at the end
 
-          if ( (VSrcW16 & 0xFF00) == 0xFE00 ) {
+          if (  (VSrcW16 & 0xFF00) == 0xFE00 ) { 
+            
+            if ( VFrCnt >= PtSrc->FrNb ) {
+              err_error (( ERR_OUT, "WARNING fr > acq fr nb => !!!!!!!!!!!!!! FR = %d NO TRAILER !!!!!!!!!!!!!!!!!!!!", VFrCnt ));
+            }
+            
+            else {
+              err_error (( ERR_OUT, "ERROR fr in acq fr nb => !!!!!!!!!!!!!! FR = %d NO TRAILER !!!!!!!!!!!!!!!!!!!!", VFrCnt ));              
+            }
+            
+            
+            
+            if ( PrintLvl < 0 ) {           
+              msg (( MSG_OUT, "!!!!!!!!!!!!!! FR = %d NO TRAILER - A !!!!!!!!!!!!!!!!!!!!", VFrCnt ));
+            }
+            
             VFrWithoutTrailer = 1;
             VFrWithoutTrailerCnt++;
+            VPtFrDecHead->NoTrailer = 1;  // 08/06/2021
 
             // Calc fr data size
 
@@ -21077,10 +22630,28 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
 
           if ( ViW16 >= VW16Nb  ) {
             VFrTooLong = 1;
+            
+            VPtFrDecHead->Truncated = 1;  // 09/06/2021
 
             // Calc fr data size
+                  VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC;
+                  err_error (( ERR_OUT, "Stop frame processing max W16 nb = %d reached => VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, VFrCnt, PtSrc->FrNb ));
+                  // return (-2);  // 10/10/2021 return (-2), before it was return (-1)
+                  
+                  // Since 11/10/2021
+                  
+                  VRetOk = -2;
+                  break;
+                  
 
             VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+            
+            if ( PrintLvl < 0 ) {
+              msg (( MSG_OUT, "!!!!!!!!!!!!!! FR = %d IS TOO LONG !!!!!!!!!!!!!!!!!!!!", VFrCnt ));
+              err_error (( ERR_OUT, "%s", MSG_OUT ));
+            }
+            
+            
           }
 
 
@@ -21117,6 +22688,12 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
 
             if ( VFrTooLong ) {
 
+              if ( PrintLvl <  0 ) {
+                msg (( MSG_OUT, "*********************** ACQ %d MSis = %d FR %d TOO LONG = %d W16, VW16Nb = %d ******************************", PtDest->AcqId, MSisId, VFrCnt, VPtFrDecHead->FrDataSzW16, VW16Nb  ));              
+              }
+
+              err_error (( ERR_OUT, "WARNING : Stop frame processing max W16 nb = %d reached => AcqId = %.4d, MSisID = %d : VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, PtSrc->AcqId, MSisId, VFrCnt, PtSrc->FrNb ));
+                
               PtDest->ResAFrNbTrunc[MSisId]++; // Update truncated frames counter - 30/05/2021
 
               MIS1__BT_VGDecodecFrWarnErr++;
@@ -21127,15 +22704,23 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
               }
 
               else {
+                
                 VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC;
-                err_error (( ERR_OUT, "Stop frame processing max W16 nb = %d reached => VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, VFrCnt, PtSrc->FrNb ));
-                return (-1);
+                
+                err_error (( ERR_OUT, "ERROR : Stop frame processing max W16 nb = %d reached => AcqId = %.4d , MSisID = %d : VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, PtSrc->AcqId, MSisId, VFrCnt, PtSrc->FrNb ));
+                
+                // return (-2);  // 10/10/2021 return (-2), before it was return (-1)
+                  
+                // Since 11/10/2021
+                  
+                VRetOk = -2;
+                break;
               }
 
             } // End if ( VFrTooLong )
 
             // Normal end of frame => break frame decoding loop
-
+            
             break;
           }
 
@@ -21152,7 +22737,7 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
         
         VFakeHdCnt++;
         
-        if ( PrintLvl >= 1  ) {
+        if ( VPrintLvlAbs >= 1  ) {
           msg (( MSG_OUT, "Fake header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFakeHdCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
         }
         
@@ -21160,9 +22745,7 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
 
       
     } // End frame processing
-        
-    
-    
+                
 
   } // End for
 
@@ -21176,7 +22759,8 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
   PtDest->ResAFrNbWoTrailer[MSisId] = VFrWithoutTrailerCnt;
   PtDest->ResAFrFakeHeadCnt[MSisId] = VFakeHdCnt;
   PtDest->ResARegNb[MSisId]         = VRegCntInAcq;
-  PtDest->ResAPixNb[MSisId]         = VPixCntInAcq;
+  PtDest->ResAPixNb[MSisId]         = VPixCntInAcq;  
+  PtDest->ResAFrNbOvfFlags[MSisId]  = VFrOvfFlagsCnt;
   
 
   if ( (VFrCnt == 0) || (VFakeHdCnt > 0) ) {
@@ -21185,16 +22769,31 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
   }
   
 
-  if ( PrintLvl  ) {
+  if ( VPrintLvlAbs  ) {
     
     msg (( MSG_OUT, "" ));
-    msg (( MSG_OUT, "%d frames found, %d fake headers found", VFrCnt, VFakeHdCnt ));
+    msg (( MSG_OUT, "AcqId = %.4d, MSisId = %d", PtSrc->AcqId, MSisId ));
+    msg (( MSG_OUT, "" ));
+    msg (( MSG_OUT, "%d frames found, %d fake headers found, %d frames with OVF flags", VFrCnt, VFakeHdCnt, VFrOvfFlagsCnt ));
     msg (( MSG_OUT, "ViW16 = %d", ViW16 ));
     
     msg (( MSG_OUT, "" ));
   }
 
-
+  
+  if ( VDataAfterTrailer ) {
+    msg (( MSG_OUT, "" ));
+    msg (( MSG_OUT, "!!!!!!!!!!!!!! AcqId = %.4d : %d Data W16  after trailer !!!!!!!!!!!!!!", PtSrc->AcqId, VDataAfterTrailerNb ));
+  }
+  
+  
+  if ( VFrOvfFlagsCnt != 0 ) {
+    msg (( MSG_OUT, "" ));
+    msg (( MSG_OUT, "WARNING !!!!!!!!!!!!!!!!!!!!! AcqId = %.4d, MSisId = %d => %d frames with OVF bit(s) set", PtSrc->AcqId, MSisId, VFrOvfFlagsCnt ));
+    msg (( MSG_OUT, "" ));
+  }
+  
+ 
   #ifndef CC_NOT_CPP_BUILDER
   
     if ( MeasExecTime ) {
@@ -21215,19 +22814,29 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
   #endif
   
   
+  // Before 11/10/2021 // return (VExecTimeUs * VRetOk );
+  
+  // Since 11/10/2021
+  
+  if ( VRetOk < 0 ) {
+    return ( VRetOk );
+  }
   
   
-  return (VExecTimeUs * VRetOk );
+  return (VExecTimeUs);
 }
 
 
+// 8888888
 
 /* DOC_FUNC_BEGIN */
 /**
 ===================================================================================
-* \fn      : double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, UInt8 PrintLvl )
+* \fn      : double MIS1__BT_FBtDecodeFrMSis1 ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl )
 *
-* \brief   : Decode the frames for one MSis 1 : List frames, exytract fr header, fr cnt but NO PIXELS DECODING  \n
+* \brief   : Decode the frames for one MSis 1 : List frames, extract fr header, fr cnt, and pixels decoding  \n
+*          : It is the former MIS1__BT_FBtDecodeFr (...) function renamed as MIS1__BT_FBtDecodeFrMSis1 \n
+*          : The function MIS1__BT_FBtDecodeFr (...) now handles both MSis 1 / 2.X 
 *
 * \param   : PtSrc    - Pointer to source record MIS1__TBtAcqW16A
 *
@@ -21257,6 +22866,8 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
 *  bug     :
 *          :
 * \date    : Date      : 25/05/2021
+* \date    : Rev       : 08/06/2021 - NoTrailer field update
+* \date    : Rev       : 17/06/2024 - MSis 2, 2.X pixels (cluster) decoding handling
 * \date    : Rev       : 
 * \date    : Doc date  : 24/05/2021
 * \author  : Name      : Gilles CLAUS
@@ -21268,9 +22879,12 @@ double MIS1__BT_FBtDecodeFrLight ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtD
 /* DOC_FUNC_END */
 
 
-double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, UInt8 PrintLvl ) {
+double MIS1__BT_FBtDecodeFrMSis1 ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl ) {
   
   SInt32      VRetOk;
+  
+  SInt8       VPrintLvlAbs;
+  
   double      VExecTimeUs;
   
   SInt32      VSrcW16;    // W16 to convert
@@ -21306,6 +22920,7 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
   
   UInt8       VFrWithoutTrailer;  // Flag to handle frames without a trailer at the end, a header can starts
   UInt8       VTrailerDetected;   // Flag => trailer detected in current frame scanning
+
   UInt8       VFrTooLong;         // Flag => frame length > max possible
   UInt8       VFrEnd;             // Flag => end of frame = OR of previois flags
   
@@ -21321,6 +22936,8 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
   MIS1__TBtFrDecHead* VPtFrDecHead;
   
   
+  VPrintLvlAbs = abs ( PrintLvl );
+  
   // Check param
   
   // ----------------------------------------------
@@ -21331,6 +22948,7 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
   // => This function SHOULD not be called directly, but only via ...
   // => In case you need to call it directly => Check parameters you provide
   
+    
   // Measure exec time
   
   #ifndef CC_NOT_CPP_BUILDER
@@ -21403,7 +23021,7 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
   // -------------------------------------------------------------
   
   
-  if ( PrintLvl ) {
+  if ( VPrintLvlAbs ) {
     msg (( MSG_OUT, "Decode MSis No %d, Src frame = %d W16", MSisId, VW16Nb ));
   }
   
@@ -21487,7 +23105,7 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
           
           VPtFrDecHead->FrCnt = (VFrHdW0 &0xFF) + ((VFrHdW1 & 0xFF) << 8) + ((VFrHdW2 & 0xFF) << 16) + ((VFrHdW3 & 0xFF) << 24);
           
-          if ( PrintLvl >= 3  ) {
+          if ( VPrintLvlAbs >= 3  ) {
             msg (( MSG_OUT, "Header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFrCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
             msg (( MSG_OUT, "FrCnt = %d", VPtFrDecHead->FrCnt ));
           }
@@ -21498,6 +23116,7 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
           // Result fields not calculated now
           
           VPtFrDecHead->Errors          = 0;
+          VPtFrDecHead->NoTrailer       = 0;  // 08/06/2021
           VPtFrDecHead->FrDataSzW16     = 0;
           VPtFrDecHead->RegionNb        = 0;
           VPtFrDecHead->FiredPixNb      = 0;
@@ -21523,9 +23142,13 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
               
               VCurRegHead.W16 = VSrcW16;
               
-              if ( PrintLvl >= 2 ) {
+              // 06/06/2021
+              // - Add print of Region.F.Reg
+              // - FrCnt dispplay as ud
+              
+              if ( VPrintLvlAbs >= 2 ) {
                 msg (( MSG_OUT, "" ));
-                msg (( MSG_OUT, "Fr No %.3d : MSis 1 FrCnt = %d - Region No %.2d", VFrCnt - 1, VPtFrDecHead->FrCnt, VRegCntInFr - 1 ));
+                msg (( MSG_OUT, "Fr No %.3ud : MSis 1 FrCnt = %d - Region No %.2d - Region.F.Reg = %d", VFrCnt - 1, VPtFrDecHead->FrCnt, VRegCntInFr - 1, VCurRegHead.F.Reg ));
               }
 
               continue;
@@ -21551,7 +23174,7 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
               
               VPtFrDecHead->CheckSum = VSrcW16;
               
-              if ( PrintLvl >= 3 ) {
+              if ( VPrintLvlAbs >= 3 ) {
                 msg (( MSG_OUT, "Fr No %.3d MSisFrCnt = %.6d - Trailer", VFrCnt, VPtFrDecHead->FrCnt ));
               }
 
@@ -21560,8 +23183,10 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
             // Detects header => frame without trailer at the end
             
             if ( (VSrcW16 & 0xFF00) == 0xFE00 ) {
+              
               VFrWithoutTrailer = 1;
               VFrWithoutTrailerCnt++;
+              VPtFrDecHead->NoTrailer = 1;  // 08/06/2021
               
               // Calc fr data size
               
@@ -21570,7 +23195,8 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
             
             // Frame is too long : Decoding bug or MSis 1 side bug or unknown info / MSis 1 data stream
             
-            if ( ViW16 >= VW16Nb  ) {
+            if ( ViW16 >= VW16Nb  ) {              
+                
               VFrTooLong = 1;
               
               // Calc fr data size
@@ -21592,7 +23218,7 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
               
               VCurPix.W16 = VSrcW16;
               
-              // Calcul de Y : DATA[15:7] (9 bits équivalent à 10 bits DATA[15:6]/2)
+              // Calcul de Y : DATA[15:7] (9 bits é±µivalent à ±0 bits DATA[15:6]/2)
 
               VResPix.C.y = VCurPix.F.PixAddr / 2;
     
@@ -21612,9 +23238,11 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
               }
 
               // Print
+              // 06/06/2021 : Add VSrcW16  print
+              
 
-              if ( PrintLvl >= 2  ) {
-                msg (( MSG_OUT, "Pixel : x = %d, y = %d", VResPix.C.x, VResPix.C.y  ));
+              if ( VPrintLvlAbs >= 2  ) {
+                msg (( MSG_OUT, "VSrcW16 = %X [H] => PixAddr = %d, PE = %d, Code = %d => Pixel : x = %d, y = %d", VSrcW16, VCurPix.F.PixAddr,  VCurPix.F.PeAddr,  VCurPix.F.Code, VResPix.C.x, VResPix.C.y  ));
               }
 
             }
@@ -21642,10 +23270,17 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
               // Upgraded on 29/05/2021
               // If it is the last frame of Acq => Warning, because the frame is probably only cut
               // If it is NOT the last frame of Acq => Error because it should not happne => There is a problem
-              
+              // Upgraded on 11/10/2021
+              // If it is NOT the last frame of Acq => Error, returns -2, before -1 was returned
 
               if ( VFrTooLong ) {
 
+
+                if ( PrintLvl < 0 ) {
+                  msg (( MSG_OUT, "*********************** ACQ %d MSis = %d FR %d TOO LONG = %d W16, VW16Nb = %d, VPixCntInFr = %d ******************************", PtDest->AcqId, MSisId, VFrCnt, VPtFrDecHead->FrDataSzW16, VW16Nb, VPixCntInFr  ));
+                }
+
+                
                 PtDest->ResAFrNbTrunc[MSisId]++; // Update truncated frames counter - 30/05/2021
 
                 MIS1__BT_VGDecodecFrWarnErr++;
@@ -21658,7 +23293,13 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
                 else {
                   VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC;
                   err_error (( ERR_OUT, "Stop frame processing max W16 nb = %d reached => VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, VFrCnt, PtSrc->FrNb ));
-                  return (-1);
+                  // return (-2);  // 10/10/2021 return (-2), before it was return (-1)
+                  
+                  // Since 11/10/2021
+                  
+                  VRetOk = -2;
+                  break;
+                  
                 }
 
              } // End if ( VFrTooLong )
@@ -21691,7 +23332,7 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
           
           VFakeHdCnt++;
           
-          if ( PrintLvl >= 1  ) {
+          if ( VPrintLvlAbs >= 1  ) {
             msg (( MSG_OUT, "Fake header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFakeHdCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
           }
           
@@ -21724,7 +23365,7 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
     }
 
     
-    if ( PrintLvl  ) {
+    if ( VPrintLvlAbs  ) {
 
       msg (( MSG_OUT, "" ));
       msg (( MSG_OUT, "%d frames found, %d fake headers found", VFrCnt, VFakeHdCnt ));
@@ -21756,10 +23397,2505 @@ double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, 
     
     
     
-    return (VExecTimeUs * VRetOk );
+    // Before 11/10/2021 // return (VExecTimeUs * VRetOk );
+    
+    // Since 11/10/2021
+    
+    if ( VRetOk < 0 ) {
+      return ( VRetOk );
+    }
+    
+    
+    return (VExecTimeUs);
 }
   
+
+
+
+SInt32 APP__FAddCrAtEndOfStr ( char * Src, UInt32 MaxStrSz ) {
+
+  SInt32 Vi;
+
+  for ( Vi = 0; Vi < MaxStrSz; Vi++ ) {
+
+    if ( (Src[Vi] == 0) && ( (Vi + 3) <= MaxStrSz) ) {
+      Src[Vi]   = 0x0D;
+      Src[Vi+1] = 0x0A;
+      Src[Vi+2] = 0;
+      return (0);
+    }
+
+  }
+
+  return (-1);
+}
+
+
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : SInt32 MIS1__BT_FBtDecStdPixEnDbg ( UInt8 PrintLvl )
+*          :
+* \brief   : Sets MIS1__BT_FBtDecStdPixMSis2Dbg (...) print level, can be modified when application is running
+
+*
+* \param   : PrintLvl        - The print level
+*
+* \return  : -1 If PrintLvl  < 0, othewise 0
+*          :
+* \warning : Globals   : Sets MIS1__BT_VGBtDecStdPixMSis2PrintLvl
+* \warning : Remark    :
+* \warning : Level     :
+*          :
+* \warning : Items not filled now :
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 21/06/2024
+* \date    : Rev       : 
+*
+* \date    : Doc date  : 21/06/2024
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+
+
+SInt32 MIS1__BT_FBtDecStdPixEnDbg ( SInt8 PrintLvl ) {
+ 
+  SInt32 VRet = 0;
+ 
+  // If PrintLvl comes from GUI control which is not properly initialized it can be == -1 => force it to 0
+ 
+  if ( PrintLvl < 0 ){
+    PrintLvl = 0;
+    VRet     = -1;
+  }
+ 
+  MIS1__BT_VGBtDecStdPixMSis2PrintLvl = PrintLvl;
+ 
+  err_retfail ( VRet, (ERR_OUT,"WARNING : PrintLvl == -1, force it to 0 => GUI control item index not set ? ;-)") );
   
+  return (0);
+} 
+
+
+
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : SInt32 MIS1__BT_FBtDecStdPixMSis2Dbg ( MIS1__TStdPix StdPix, UInt16 RegId, MIS1__TPixXY* PtAResPix, UInt8 MaxESzAResPix, SInt8 PrintLvl, char* StrPrint, UInt16 MaxSzStrPrint  )
+*          :
+* \brief   : Decodes MSis 2 cluster field, pixels list is stored in PtAResPix and
+*          : can also be stored in a string for debugging purpose
+*
+* \param   : StdPix         - Source STD cluster
+* \param   : RegId          - Region ID
+* \param   : PtAResPix      - Destination pixels array, its sie must be >= 4 pixels
+* \param   : MaxESzAResPix  - The size i items of the array passed as PtAResPix 
+* \param   : PrintLvl       - Level of debug print in StrPrint, 0 = None, 1 = list of pixels X,Y coordinates, 2 = Cluster info + pixels X,Y coordinates 
+* \param   : StrPrint       - The string which contains debug print results
+* \param   : MaxSzStrPrint  - Size of variable StrPrint  
+*
+* \return  : The number of pixels in th cluste or < 0 in case of error
+*          :
+* \warning : Globals   :
+* \warning : Remark    : A faster version of this function without debug print option exists => MIS1__BT_FBtDecStdPixMSis2 (...)
+* \warning : Level     :
+*          :
+* \warning : Items not filled now :
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 19/06/2024
+* \date    : Rev       : 
+*
+* \date    : Doc date  : 20/06/2024
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+ 
+
+// SInt32 MIS1__BT_FBtDecStdPixMSis2 (...) is based on
+// char* APP_MSIS2__FConvStdPixStr ( APP__TStdPix* PtStdPix, UInt16* PtRegId )
+// from msis123_data_decoding.c
+
+
+// PtAResPix => Array for result max 4 pixels
+// MaxESzAResPix => Max size of PtAResPix, if < 4 => exit function
+
+// PrintLvl
+// 0 => No print
+// 1 => Print in StrPrint the list of pixels coordinates x = 1, y = 10 - x = 2, y = 5 - etc ...
+// 2 => Print cluster raw data + pixels list as in option 1
+//
+
+// StrPrint => String to store pixels list for debug
+// MaxSzStrPrint => Size max de StrPrint
+
+// Returns the nb of pixels found or < 0
+
+
+
+SInt32 MIS1__BT_FBtDecStdPixMSis2Dbg ( MIS1__TStdPix StdPix, UInt16 RegId, MIS1__TPixXY* PtAResPix, UInt32 MaxESzAResPix, SInt8 PrintLvl, char* StrPrint, UInt16 MaxSzStrPrint  ) {
+  
+  static char    VStrStdPix[GLB_CMT_SZ];
+  static char    VStrStdNPix[2 * GLB_CMT_SZ];
+  static char    VStrDbgPr[GLB_CMT_SZ];
+  
+  UInt16 VRegId;
+  UInt16 VRegIdX16;   // Region Id * 16
+  UInt16 VPeAddr;
+  UInt16 VPeAddrX2;   // Pe address * 2
+  UInt16Bits VAPixAddr[4];
+  UInt16 VAx[4];
+  UInt16 VAy[4];
+  UInt8  VCode;
+  SInt8  VPixCnt;
+
+  // To be removed later
+
+
+  SInt16 APP_MSIS2__VGClustEmulCode = -1; // -1 to disable code emulation, 0-7 for pixel code emulation
+
+
+  // Check param
+
+  err_retnull ( PtAResPix, (ERR_OUT,"Abort => PtAResPix == NULL") );
+  
+  if ( MaxESzAResPix < 4 ) {
+    err_retfail ( -1, (ERR_OUT,"Abort => Desination pixels array size MaxESzAResPix  = %d < 4 ", MaxESzAResPix ) );
+  }
+  
+  
+  if ( PrintLvl > 0 ) {
+    err_retnull ( StrPrint, (ERR_OUT,"Abort => Debug print requested (PrintLvl == %d) but  StrPrin == NULL ", PrintLvl) );
+  }
+  
+  
+#ifndef CC_NOT_CPP_BUILDER  
+
+try {
+
+#endif
+  
+  VPixCnt = 0;
+  
+  
+  if ( 1 /* PtRegId != NULL */ ) {
+    
+    
+    // typedef union {
+      //
+      //  UInt16 w16; /*!< Full word, access via w16 */
+      //
+      //  struct
+      //  {
+        //    UInt8 Code    :  3; /*!< B00..B02 = Code, not used on MSis1, access via f.Code     */
+        //    UInt8 PeAddr  :  3; /*!< B03..B05 = PE adddress, access via f.PeAddr               */
+        //    UInt8 PixAddr : 10; /*!< B06..B15 = Pixel address = row, access via f.PixAddr      */
+        //   }	f;
+      //
+      //  struct
+      //  {
+        //    UInt8 b0 		: 1; /*!< Bit0, access via b.b0 */
+        //    UInt8 b1 		: 1; /*!< Bit1, access via b.b1 */
+        //    UInt8 b2 		: 1; /*!< Bit2, access via b.b2 */
+        
+        //    UInt8 b3 		: 1; /*!< Bit3, access via b.b3 */
+        //    UInt8 b4 		: 1; /*!< Bit4, access via b.b4 */
+        //    UInt8 b5 		: 1; /*!< Bit5, access via b.b5 */
+        
+        //    UInt8 b6 		: 1; /*!< Bit6, access via b.b6 */
+        //    UInt8 b7 		: 1; /*!< Bit7, access via b.b7 */
+        //    UInt8 b8 		: 1; /*!< Bit0, access via b.b8 */
+        //    UInt8 b9 		: 1; /*!< Bit1, access via b.b9 */
+        //    UInt8 b10 		: 1; /*!< Bit2, access via b.b10 */
+        //    UInt8 b11 		: 1; /*!< Bit3, access via b.b11 */
+        //    UInt8 b12 		: 1; /*!< Bit4, access via b.b12 */
+        //    UInt8 b13 		: 1; /*!< Bit5, access via b.b13 */
+        //    UInt8 b14 		: 1; /*!< Bit6, access via b.b14 */
+        //    UInt8 b15 		: 1; /*!< Bit7, access via b.b15 */
+        //   }	b;
+      //
+      //
+      // } APP__TStdPix;
+    
+    
+    // Debug print
+    
+    if ( PrintLvl == 2 ) {
+      
+      sprintf ( VStrDbgPr, "MSis 2 cluster decoding : Std Pix : Pix addr = %.4d, PE addr  = %.2d, Code = %.2d", StdPix.F.PixAddr, StdPix.F.PeAddr, StdPix.F.Code );
+      msg (( MSG_OUT, VStrDbgPr ));
+    }
+    
+    
+    VStrStdNPix[0] = 0;
+    
+    // Removed on 14/09/2023 because it generates CR in Memo & log file between pixel raw data printing and decoder pixel
+    // => It seems not useful => It can be enabled again if needed  
+    //
+    // APP__FAddCrAtEndOfStr ( VStrStdNPix, GLB_CMT_SZ );
+    
+    
+    // First pixel
+    
+    
+    VRegId       = RegId;
+    VRegIdX16    = VRegId * 16;
+    
+    VPeAddr      = StdPix.F.PeAddr;
+    VPeAddrX2    = VPeAddr * 2;
+    
+    VAPixAddr[0].w16 = StdPix.F.PixAddr;
+    
+    VCode = StdPix.F.Code;
+    
+    // msg (( MSG_OUT, "VCode = %x [H]", VCode ));
+    
+    if ( APP_MSIS2__VGClustEmulCode >= 0 ) {
+      VCode = APP_MSIS2__VGClustEmulCode;
+    }
+    
+    VAy[VPixCnt] = VAPixAddr[0].w16 / 2;
+    
+    VAx[VPixCnt] = VRegIdX16 + VPeAddrX2 + (VAPixAddr[0].b.b0 ^ VAPixAddr[0].b.b1);
+        
+    PtAResPix[VPixCnt].C.x = VAx[VPixCnt];
+    PtAResPix[VPixCnt].C.y = VAy[VPixCnt];
+        
+     
+    if ( PrintLvl == 1 ) {
+      sprintf ( VStrStdPix, "Std Pix : x = %.4d y = %.4d ", VAx[VPixCnt], VAy[VPixCnt] );
+    }
+      
+    if ( PrintLvl == 2 ) {
+      sprintf ( VStrStdPix, "Std Pix : Pix addr = %.4d : x = %.4d y = %.4d ", VAPixAddr[0].w16, VAx[VPixCnt], VAy[VPixCnt] );
+    }
+    
+    if ( PrintLvl > 0 ) {
+      APP__FAddCrAtEndOfStr (VStrStdNPix, GLB_CMT_SZ );
+      strcat ( VStrStdNPix, VStrStdPix );
+    }
+    
+    ++VPixCnt;
+    
+    // Pixel N + 1
+    
+    if ( (VCode & 0x01) ) {    
+                  
+      VAPixAddr[1].w16 = VAPixAddr[0].w16 + 1;
+      
+      VAy[VPixCnt] = VAPixAddr[1].w16 / 2;
+      
+      VAx[VPixCnt] = VRegIdX16 + VPeAddrX2 + (VAPixAddr[1].b.b0 ^ VAPixAddr[1].b.b1);
+      
+      PtAResPix[VPixCnt].C.x = VAx[VPixCnt];
+      PtAResPix[VPixCnt].C.y = VAy[VPixCnt];
+
+      
+      if ( PrintLvl == 1 ) {
+        sprintf ( VStrStdPix, "Std Pix : x = %.4d y = %.4d ", VAx[VPixCnt], VAy[VPixCnt] );
+      }
+      
+      if ( PrintLvl == 2 ) {
+        sprintf ( VStrStdPix, "Std Pix : Pix addr = %.4d : x = %.4d y = %.4d ", VAPixAddr[1].w16, VAx[VPixCnt], VAy[VPixCnt] );
+      }
+           
+      if ( PrintLvl > 0 ) {
+        APP__FAddCrAtEndOfStr (VStrStdNPix, GLB_CMT_SZ );    
+        strcat ( VStrStdNPix, VStrStdPix );
+      }
+      
+      ++VPixCnt;
+    }
+    
+    // Pixel N + 2
+    
+    if ( (VCode & 0x02) ) {              
+      
+      VAPixAddr[2].w16 = VAPixAddr[0].w16 + 2;
+      
+      VAy[VPixCnt] = VAPixAddr[2].w16 / 2;
+      
+      VAx[VPixCnt] = VRegIdX16 + VPeAddrX2 + (VAPixAddr[2].b.b0 ^ VAPixAddr[2].b.b1);
+      
+      PtAResPix[VPixCnt].C.x = VAx[VPixCnt];
+      PtAResPix[VPixCnt].C.y = VAy[VPixCnt];
+
+      
+      if ( PrintLvl == 1 ) {
+        sprintf ( VStrStdPix, "Std Pix : x = %.4d y = %.4d ", VAx[VPixCnt], VAy[VPixCnt] );
+      }
+      
+      if ( PrintLvl == 2 ) {
+        sprintf ( VStrStdPix, "Std Pix : Pix addr = %.4d : x = %.4d y = %.4d ", VAPixAddr[2].w16, VAx[VPixCnt], VAy[VPixCnt] );
+      }
+      
+      
+      if ( PrintLvl > 0 ) {
+        APP__FAddCrAtEndOfStr (VStrStdNPix, GLB_CMT_SZ );    
+        strcat ( VStrStdNPix, VStrStdPix );
+      }
+      
+      ++VPixCnt;
+    }
+    
+    
+    // Pixel N + 3
+    
+    if ( (VCode & 0x04) ) {                 
+      
+      VAPixAddr[3].w16 = VAPixAddr[0].w16 + 3;
+      
+      VAy[VPixCnt] = VAPixAddr[3].w16 / 2;
+      
+      VAx[VPixCnt] = VRegIdX16 + VPeAddrX2 + (VAPixAddr[3].b.b0 ^ VAPixAddr[3].b.b1);
+      
+      PtAResPix[VPixCnt].C.x = VAx[VPixCnt];
+      PtAResPix[VPixCnt].C.y = VAy[VPixCnt];
+      
+      
+      if ( PrintLvl == 1 ) {
+        sprintf ( VStrStdPix, "Std Pix : x = %.4d y = %.4d ", VAx[VPixCnt], VAy[VPixCnt] );
+      }
+      
+      if ( PrintLvl == 2 ) {
+        sprintf ( VStrStdPix, "Std Pix : Pix addr = %.4d : x = %.4d y = %.4d ", VAPixAddr[3].w16, VAx[VPixCnt], VAy[VPixCnt] );
+      }
+      
+      
+      if ( PrintLvl > 0 ) {
+        APP__FAddCrAtEndOfStr (VStrStdNPix, GLB_CMT_SZ );    
+        strcat ( VStrStdNPix, VStrStdPix );
+      }
+      
+      ++VPixCnt;
+    }
+    
+    //Add a CR at end of cluster print
+    
+    // APP__FAddCrAtEndOfStr ( VStrStdNPix, GLB_CMT_SZ );
+    
+  }
+  
+  else {
+    sprintf ( VStrStdPix, "Std Pix : Pix addr = %.4d, PE addr  = %.2d", StdPix.F.PixAddr, StdPix.F.PeAddr );
+  }
+
+#ifndef CC_NOT_CPP_BUILDER  
+
+} // End try  
+ 
+  catch ( Exception& VException ) {
+    err_error (( ERR_OUT, "APP_MSIS2__FConvStdPixStr (...) exception = %s - sizes VStrStdPix = %d, VStrStdNPix = %d, VStrDbgPr = %d", VException.Message.c_str(), strlen (VStrStdPix), strlen (VStrStdNPix), strlen (VStrDbgPr) ));
+  }
+
+ 
+#endif
+
+ 
+  if ( PrintLvl > 0) {
+    
+    if ( strlen (VStrStdNPix) < MaxSzStrPrint ) {
+      strcpy ( StrPrint, VStrStdNPix );
+    }
+    
+    else {
+      err_retfail ( -1, (ERR_OUT,"Abort => Destination debug / message string size = %d < required  = %d", MaxSzStrPrint, strlen (VStrStdNPix)  + 1 ) );
+    }  
+    
+  } 
+
+
+  
+  return ( VPixCnt );
+}
+
+
+
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : SInt32 MIS1__BT_FBtDecStdPixMSis2 ( MIS1__TStdPix StdPix, UInt16 RegId, MIS1__TPixXY* PtAResPix, UInt8 MaxESzAResPix  )
+*          :
+* \brief   : Decodes MSis 2 cluster field, pixels list is stored in PtAResPix and
+*          : can also be stored in a string for debugging purpose
+*
+* \param   : StdPix         - Source STD cluster
+* \param   : RegId          - Region ID
+* \param   : PtAResPix      - Destination pixels array, its sie must be >= 4 pixels
+* \param   : MaxESzAResPix  - The size i items of the array passed as PtAResPix 
+*
+* \return  : The number of pixels in th cluste or < 0 in case of error
+*          :
+* \warning : Globals   :
+* \warning : Remark    : Copy of MIS1__BT_FBtDecStdPixMSis2 (...) without debug print options in order to reduce execution time
+* \warning : Level     :
+*          :
+* \warning : Items not filled now :
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 21/06/2024
+* \date    : Rev       : 
+*
+* \date    : Doc date  : 20/06/2024
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+ 
+
+// SInt32 MIS1__BT_FBtDecStdPixMSis2 (...) is based on
+// char* APP_MSIS2__FConvStdPixStr ( APP__TStdPix* PtStdPix, UInt16* PtRegId )
+// from msis123_data_decoding.c
+
+
+// PtAResPix => Array for result max 4 pixels
+// MaxESzAResPix => Max size of PtAResPix, if < 4 => exit function
+
+// PrintLvl
+// 0 => No print
+// 1 => Print in StrPrint the list of pixels coordinates x = 1, y = 10 - x = 2, y = 5 - etc ...
+// 2 => Print cluster raw data + pixels list as in option 1
+//
+
+// StrPrint => String to store pixels list for debug
+// MaxSzStrPrint => Size max de StrPrint
+
+// Returns the nb of pixels found or < 0
+
+
+
+SInt32 MIS1__BT_FBtDecStdPixMSis2 ( MIS1__TStdPix StdPix, UInt16 RegId, MIS1__TPixXY* PtAResPix, UInt32 MaxESzAResPix  ) {
+  
+  static char    VStrStdPix[GLB_CMT_SZ];
+  static char    VStrStdNPix[2 * GLB_CMT_SZ];
+  static char    VStrDbgPr[GLB_CMT_SZ];
+  
+  UInt16 VRegId;
+  UInt16 VRegIdX16;   // Region Id * 16
+  UInt16 VPeAddr;
+  UInt16 VPeAddrX2;   // Pe address * 2
+  UInt16Bits VAPixAddr[4];
+  UInt16 VAx[4];
+  UInt16 VAy[4];
+  UInt8  VCode;
+  SInt8  VPixCnt;
+
+  // To be removed later
+
+
+  SInt16 APP_MSIS2__VGClustEmulCode = -1; // -1 to disable code emulation, 0-7 for pixel code emulation
+
+
+  // Check param
+
+  err_retnull ( PtAResPix, (ERR_OUT,"Abort => PtAResPix == NULL") );
+  
+  if ( MaxESzAResPix < 4 ) {
+    err_retfail ( -1, (ERR_OUT,"Abort => Desination pixels array size MaxESzAResPix  = %d < 4 ", MaxESzAResPix ) );
+  }
+  
+     
+
+#ifndef CC_NOT_CPP_BUILDER 
+
+try {
+
+#endif  
+  
+  VPixCnt = 0;
+  
+  
+  if ( 1 /* PtRegId != NULL */ ) {
+    
+    
+    // typedef union {
+      //
+      //  UInt16 w16; /*!< Full word, access via w16 */
+      //
+      //  struct
+      //  {
+        //    UInt8 Code    :  3; /*!< B00..B02 = Code, not used on MSis1, access via f.Code     */
+        //    UInt8 PeAddr  :  3; /*!< B03..B05 = PE adddress, access via f.PeAddr               */
+        //    UInt8 PixAddr : 10; /*!< B06..B15 = Pixel address = row, access via f.PixAddr      */
+        //   }	f;
+      //
+      //  struct
+      //  {
+        //    UInt8 b0 		: 1; /*!< Bit0, access via b.b0 */
+        //    UInt8 b1 		: 1; /*!< Bit1, access via b.b1 */
+        //    UInt8 b2 		: 1; /*!< Bit2, access via b.b2 */
+        
+        //    UInt8 b3 		: 1; /*!< Bit3, access via b.b3 */
+        //    UInt8 b4 		: 1; /*!< Bit4, access via b.b4 */
+        //    UInt8 b5 		: 1; /*!< Bit5, access via b.b5 */
+        
+        //    UInt8 b6 		: 1; /*!< Bit6, access via b.b6 */
+        //    UInt8 b7 		: 1; /*!< Bit7, access via b.b7 */
+        //    UInt8 b8 		: 1; /*!< Bit0, access via b.b8 */
+        //    UInt8 b9 		: 1; /*!< Bit1, access via b.b9 */
+        //    UInt8 b10 		: 1; /*!< Bit2, access via b.b10 */
+        //    UInt8 b11 		: 1; /*!< Bit3, access via b.b11 */
+        //    UInt8 b12 		: 1; /*!< Bit4, access via b.b12 */
+        //    UInt8 b13 		: 1; /*!< Bit5, access via b.b13 */
+        //    UInt8 b14 		: 1; /*!< Bit6, access via b.b14 */
+        //    UInt8 b15 		: 1; /*!< Bit7, access via b.b15 */
+        //   }	b;
+      //
+      //
+      // } APP__TStdPix;
+    
+        
+    
+    VStrStdNPix[0] = 0;
+    
+    // Removed on 14/09/2023 because it generates CR in Memo & log file between pixel raw data printing and decoder pixel
+    // => It seems not useful => It can be enabled again if needed  
+    //
+    // APP__FAddCrAtEndOfStr ( VStrStdNPix, GLB_CMT_SZ );
+    
+    
+    // First pixel
+    
+    
+    VRegId       = RegId;
+    VRegIdX16    = VRegId * 16;
+    
+    VPeAddr      = StdPix.F.PeAddr;
+    VPeAddrX2    = VPeAddr * 2;
+    
+    VAPixAddr[0].w16 = StdPix.F.PixAddr;
+    
+    VCode = StdPix.F.Code;
+    
+    // msg (( MSG_OUT, "VCode = %x [H]", VCode ));
+    
+    if ( APP_MSIS2__VGClustEmulCode >= 0 ) {
+      VCode = APP_MSIS2__VGClustEmulCode;
+    }
+    
+    VAy[VPixCnt] = VAPixAddr[0].w16 / 2;
+    
+    VAx[VPixCnt] = VRegIdX16 + VPeAddrX2 + (VAPixAddr[0].b.b0 ^ VAPixAddr[0].b.b1);
+        
+    PtAResPix[VPixCnt].C.x = VAx[VPixCnt];
+    PtAResPix[VPixCnt].C.y = VAy[VPixCnt];
+    
+    ++VPixCnt;
+    
+    
+    // Pixel N + 1
+    
+    if ( (VCode & 0x01) ) {    
+                  
+      VAPixAddr[1].w16 = VAPixAddr[0].w16 + 1;
+      
+      VAy[VPixCnt] = VAPixAddr[1].w16 / 2;
+      
+      VAx[VPixCnt] = VRegIdX16 + VPeAddrX2 + (VAPixAddr[1].b.b0 ^ VAPixAddr[1].b.b1);
+      
+      PtAResPix[VPixCnt].C.x = VAx[VPixCnt];
+      PtAResPix[VPixCnt].C.y = VAy[VPixCnt];
+            
+      ++VPixCnt;
+    }
+    
+    // Pixel N + 2
+    
+    if ( (VCode & 0x02) ) {              
+      
+      VAPixAddr[2].w16 = VAPixAddr[0].w16 + 2;
+      
+      VAy[VPixCnt] = VAPixAddr[2].w16 / 2;
+      
+      VAx[VPixCnt] = VRegIdX16 + VPeAddrX2 + (VAPixAddr[2].b.b0 ^ VAPixAddr[2].b.b1);
+      
+      PtAResPix[VPixCnt].C.x = VAx[VPixCnt];
+      PtAResPix[VPixCnt].C.y = VAy[VPixCnt];
+
+            
+      ++VPixCnt;
+    }
+    
+    
+    // Pixel N + 3
+    
+    if ( (VCode & 0x04) ) {                 
+      
+      VAPixAddr[3].w16 = VAPixAddr[0].w16 + 3;
+      
+      VAy[VPixCnt] = VAPixAddr[3].w16 / 2;
+      
+      VAx[VPixCnt] = VRegIdX16 + VPeAddrX2 + (VAPixAddr[3].b.b0 ^ VAPixAddr[3].b.b1);
+      
+      PtAResPix[VPixCnt].C.x = VAx[VPixCnt];
+      PtAResPix[VPixCnt].C.y = VAy[VPixCnt];
+      
+            
+      ++VPixCnt;
+    }
+    
+    //Add a CR at end of cluster print
+    
+    // APP__FAddCrAtEndOfStr ( VStrStdNPix, GLB_CMT_SZ );
+    
+  }
+  
+#ifndef CC_NOT_CPP_BUILDER 
+
+} // End try  
+ 
+  catch ( Exception& VException ) {
+    err_error (( ERR_OUT, "APP_MSIS2__FConvStdPixStr (...) exception = %s - sizes VStrStdPix = %d, VStrStdNPix = %d, VStrDbgPr = %d", VException.Message.c_str(), strlen (VStrStdPix), strlen (VStrStdNPix), strlen (VStrDbgPr) ));
+  }
+
+#endif
+  
+  return ( VPixCnt );
+}
+
+
+
+
+
+
+
+
+
+
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : double MIS1__BT_FBtDecodeFrMSis2 ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl )
+*
+* \brief   : Decode the frames for one MSis 2 : List frames, extract fr header, fr cnt, and pixels decoding  \n
+*
+* \param   : PtSrc    - Pointer to source record MIS1__TBtAcqW16A
+*
+* \param   : PtDest   - Pointer to destination record MIS1__TBtAcqDec
+*
+* \param   : MSisId   - If of the MSis to deocde 0 to MIS1__BT_MAX_REAL_MSIS_NB_ACQ-1
+*
+* \param   : FrNb     - Frames nb to convert, if -1 => All frames from  source record (NOT HANDLED NOW => Full frame decoding)
+*          :
+* \param   : MeasExecTime - Measure exec time 0 = No, 1 = Yes
+*
+* \param   : PrintLvl     - Debug print level, 0 = No, 1 = Print record sizes, 2 = More print, to be implemented
+*          :
+*          :
+*          :
+* \return  : Execution time in us or error code
+*          : >=  0 - Execution time in us
+*          : < 0   - Error code
+*          :
+* \warning : Globals   :
+* \warning : Remark    : WARNING => ONLY 2 channels IMPLEMENTED on 22/05/2021
+* \warning : Level     :
+*          :
+* \warning : Items not filled now :
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 17/06/2024
+* \date    : Rev       : 
+* \date    : Doc date  : 17/06/2024
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+
+
+double MIS1__BT_FBtDecodeFrMSis2 ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl ) {
+  
+  SInt32      VRetOk;
+  
+  SInt8       VPrintLvlAbs;
+  
+  double      VExecTimeUs;
+  
+  SInt32      VSrcW16;    // W16 to convert
+  // UInt16*     VPtSrcW16;  // Pointer to W16 to convert
+  
+  UInt32      VW16Nb;     // Total W16 nb to process for this MSis 1
+  SInt32      ViW16;      // Index of W16 processed
+  SInt32      VFrCnt;     // Counter of detected frames = counter of MSis 1 frame headers in data stream
+  SInt32      VFakeHdCnt; // Counter of fake headers => first W16 is header tag but not following 7 W16
+  SInt32      VFrWithoutTrailerCnt; // Counter of frames without trailer
+  SInt32      ViW16CurHead; // First W16 of current header
+  
+  
+
+  TW128As8W16 VFrHd;   // Frame header (128 bits)
+  UInt16      VFrHdW0; // Frame header W0
+  UInt16      VFrHdW1; // Frame header W1
+  UInt16      VFrHdW2; // Frame header W2
+  UInt16      VFrHdW3; // Frame header W3
+  UInt16      VFrHdW4; // Frame header W4
+  UInt16      VFrHdW5; // Frame header W5
+  UInt16      VFrHdW6; // Frame header W6
+  UInt16      VFrHdW7; // Frame header W7
+  
+
+  
+  SInt32      VRegCntInFr;        // Counter of regiosn in frame
+  SInt32      VRegCntInAcq;       // Counter of regiosn in Acq
+  SInt32      VPixCntInFr;        // Counter of pixels in each frame
+  SInt32      VPixCntInAcq;       // Counter of pixels in Acq
+  
+  // Flags
+  
+  UInt8       VFrWithoutTrailer;  // Flag to handle frames without a trailer at the end, a header can starts
+  UInt8       VTrailerDetected;   // Flag => trailer detected in current frame scanning
+
+  UInt8       VFrTooLong;         // Flag => frame length > max possible
+  UInt8       VFrEnd;             // Flag => end of frame = OR of previois flags
+  
+  // Pixels decoding 25/05/2021
+  
+  MIS1__TDsRegHeader VCurRegHead; // Current region
+  MIS1__TStdPix      VCurPix;     // Current pixel
+  
+  MIS1__TPixXY       VResPix;     // Decoded pixel x,y format to be stored in ResAAAFrPix[MSisId][FrId][PixNo]
+  MIS1__TPixXY*      VPtResPix;   // Pointer to current result pixel in ResAAAFrPix[MSisId][FrId][PixNo]
+  
+
+  MIS1__TBtFrDecHead* VPtFrDecHead;
+  
+  SInt8 VPixNbInCluster;
+  
+  static char  VDecPixStrPrint[2 * GLB_CMT_SZ];
+  UInt32 VDecPixStrPrintSz = 2 * GLB_CMT_SZ;
+  
+  
+  VPrintLvlAbs = abs ( PrintLvl );
+  
+  // Check param
+  
+  // ----------------------------------------------
+  // WARNING
+  // ----------------------------------------------
+  //
+  // NO parameters checking to save execution time, it is done in ...
+  // => This function SHOULD not be called directly, but only via ...
+  // => In case you need to call it directly => Check parameters you provide
+  
+  
+  // Measure exec time
+  
+  #ifndef CC_NOT_CPP_BUILDER
+  
+  if ( MeasExecTime ) {
+    TIME__FMeasTimeUsBegin ( 0 /* Index */ );
+  }
+  
+  
+  #else
+
+  // You can implement here exec tiome measurement for compiler <> C++ Builder
+  
+
+  #endif
+  
+  
+  // Propagates AcqId and Triggers nb
+  
+  PtDest->AcqId  = PtSrc->AcqId;
+  PtDest->TrigNb = PtSrc->AcqRawHead.Trigs.TrigNb; // Added on 30/05/2021
+  
+  
+  // Init var
+  
+  VRetOk       = 1;
+  
+  VW16Nb       = PtSrc->MSisW16Nb;
+  ViW16CurHead = 0;
+  VFrCnt       = 0;
+  VFakeHdCnt   = 0;
+  VFrWithoutTrailerCnt = 0;
+  
+  
+  VFrWithoutTrailer = 0;
+  VTrailerDetected  = 0;
+  VFrTooLong        = 0;
+  VFrEnd            = 0;
+  
+  
+  VRegCntInFr  = 0;
+  VPixCntInFr  = 0;
+  VRegCntInAcq = 0;
+  VPixCntInAcq = 0;
+  
+  VCurRegHead.W16 = 0;
+  VCurPix.W16     = 0;
+    
+  VResPix.C.x = 0;
+  VResPix.C.y = 0;
+    
+  VPtResPix = &PtDest->ResAAAFrPix[MSisId][0 /* Fr no */][0 /* Pix no */];
+ 
+    
+  
+  VPtFrDecHead = &PtDest->ResAAFrHead[MSisId][0];
+  
+  // Reset frames truncated & errors counters - 30/05/2021
+
+  PtDest->ResAFrNbTrunc[MSisId]     = 0;
+  PtDest->ResAFrNbErr[MSisId]       = 0;
+
+  // Reset decoding function warnings + errors counter - 30/05/2021
+
+  MIS1__BT_VGDecodecFrWarnErr = 0;
+
+  
+  // -------------------------------------------------------------
+  // Frames decoding
+  // -------------------------------------------------------------
+  
+  
+  if ( VPrintLvlAbs ) {
+    msg (( MSG_OUT, "Decode MSis No %d, Src frame = %d W16", MSisId, VW16Nb ));
+  }
+  
+  
+  for ( ViW16 = 0; ViW16 < VW16Nb;  ) {
+    
+    // Try to handle frames without trailer
+    //  - the first header field (W0) has already been detected at end of previous frame, don't read it again it is already here
+    
+    if ( VFrWithoutTrailer == 0 ) {
+      VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+    }
+    
+    // Detects first W16, W0 of a frame header
+    
+    if ( (VSrcW16 & 0xFF00) == 0xFE00 ) {
+      
+      ViW16CurHead = ViW16 - 1;
+      
+      VFrHdW0 = VSrcW16;
+      
+      // Checks that next 7 are also fraem header tags
+      
+      VFrHdW1 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW2 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW3 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW4 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW5 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW6 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW7 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+
+      // Header confirmed
+      
+      // if ( 1 ) {
+        
+        if ( ((VFrHdW1 & 0xFF00) == 0xFE00) && ((VFrHdW2 & 0xFF00) == 0xFE00) && ((VFrHdW3 & 0xFF00) == 0xFE00) && ((VFrHdW4 & 0xFF00) == 0xFE00) && ((VFrHdW5 & 0xFF00) == 0xFE00) && ((VFrHdW6 & 0xFF00) == 0xFE00) && ((VFrHdW7 & 0xFF00) == 0xFE00)  ) {
+          
+          // Reset regions cnt, fired pixels cnt, flags
+
+          VRegCntInFr       = 0;
+          VPixCntInFr       = 0;
+          
+          VFrWithoutTrailer = 0;
+          VTrailerDetected  = 0;
+          VFrTooLong        = 0;
+          VFrEnd            = 0;
+          
+          VCurRegHead.W16   = 0; // Resets region header
+          
+          // Update frame header results
+          
+          VPtFrDecHead->MSisId = MSisId;
+          VPtFrDecHead->FrId   = VFrCnt;
+          
+          // Sets ptr to destination pixels stream
+
+          VPtResPix = &PtDest->ResAAAFrPix[MSisId][VFrCnt][0 /* Pix No */];
+          
+          VFrCnt++;
+          
+          // Extract header
+          
+          VPtFrDecHead->MSisFrHead.AW16[0] = VFrHdW0;
+          VPtFrDecHead->MSisFrHead.AW16[1] = VFrHdW1;
+          VPtFrDecHead->MSisFrHead.AW16[2] = VFrHdW2;
+          VPtFrDecHead->MSisFrHead.AW16[3] = VFrHdW3;
+          VPtFrDecHead->MSisFrHead.AW16[4] = VFrHdW4;
+          VPtFrDecHead->MSisFrHead.AW16[5] = VFrHdW5;
+          VPtFrDecHead->MSisFrHead.AW16[6] = VFrHdW6;
+          VPtFrDecHead->MSisFrHead.AW16[7] = VFrHdW7;
+          
+          // Extract frames counter
+          
+          VPtFrDecHead->FrCnt = (VFrHdW0 &0xFF) + ((VFrHdW1 & 0xFF) << 8) + ((VFrHdW2 & 0xFF) << 16) + ((VFrHdW3 & 0xFF) << 24);
+          
+          if ( VPrintLvlAbs >= 3  ) {
+            msg (( MSG_OUT, "Header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFrCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
+            msg (( MSG_OUT, "FrCnt = %d", VPtFrDecHead->FrCnt ));
+          }
+          
+          
+          VPtFrDecHead->FirstDataW16Pos = ViW16CurHead + 8;
+          
+          // Result fields not calculated now
+          
+          VPtFrDecHead->Errors          = 0;
+          VPtFrDecHead->NoTrailer       = 0;  // 08/06/2021
+          VPtFrDecHead->FrDataSzW16     = 0;
+          VPtFrDecHead->RegionNb        = 0;
+          VPtFrDecHead->FiredPixNb      = 0;
+          VPtFrDecHead->MSisFrTrail.W16 = 0;
+          VPtFrDecHead->CheckSum        = 0;
+          VPtFrDecHead->ATrigPosW16[0]  = 0;
+          VPtFrDecHead->ATrigPosW16[MIS1__BT_FR_DEC_MAX_TRIG_NB - 1] = 0;
+
+
+          // Processing frame
+
+          while (1) {
+            
+            VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+            ViW16++;
+            
+            // Detects region
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFD00  ) {
+              
+              VRegCntInFr++;
+              VRegCntInAcq++;
+              
+              VCurRegHead.W16 = VSrcW16;
+              
+              // 06/06/2021
+              // - Add print of Region.F.Reg
+              // - FrCnt dispplay as ud
+              
+              if ( VPrintLvlAbs >= 2 ) {
+                msg (( MSG_OUT, "" ));
+                msg (( MSG_OUT, "Fr No %.3ud : MSis 1 FrCnt = %d - Region No %.2d - Region.F.Reg = %d", VFrCnt - 1, VPtFrDecHead->FrCnt, VRegCntInFr - 1, VCurRegHead.F.Reg ));
+              }
+
+              continue;
+            }
+            
+            
+            // Detects trailer
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFF00 ) {
+
+              VTrailerDetected = 1;
+
+              VPtFrDecHead->MSisFrTrail.W16 = VSrcW16;
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+              
+              // Reads checksum
+              
+              VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+              ViW16++;
+              
+              VPtFrDecHead->CheckSum = VSrcW16;
+              
+              if ( VPrintLvlAbs >= 3 ) {
+                msg (( MSG_OUT, "Fr No %.3d MSisFrCnt = %.6d - Trailer", VFrCnt, VPtFrDecHead->FrCnt ));
+              }
+
+            }
+            
+            // Detects header => frame without trailer at the end
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFE00 ) {
+              
+              VFrWithoutTrailer = 1;
+              VFrWithoutTrailerCnt++;
+              VPtFrDecHead->NoTrailer = 1;  // 08/06/2021
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+            }
+            
+            // Frame is too long : Decoding bug or MSis 1 side bug or unknown info / MSis 1 data stream
+            
+            if ( ViW16 >= VW16Nb  ) {              
+                
+              VFrTooLong = 1;
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+            }
+            
+            
+            VFrEnd = VTrailerDetected || VFrWithoutTrailer || VFrTooLong;
+            
+            // Pixel detected : Current W16 is not a region header, an empty W16 and is not an end of frame tag
+
+            // if ( (VFrEnd == 0) && ((VSrcW16 & 0xFF00) != 0xFD00) && (VSrcW16 != 0xFCAA) ) {  // Test on region not needed now with continue at end of region block
+
+            if ( (VFrEnd == 0) && (VSrcW16 != 0xFCAA) ) {
+
+
+               
+
+
+              #undef PREVIOUS_DECODING_FOR_MSIS1  
+              #ifdef PREVIOUS_DECODING_FOR_MSIS1  
+
+              VPixCntInFr++;
+              VPixCntInAcq++;
+              
+              VCurPix.W16 = VSrcW16;
+              
+              // Calcul de Y : DATA[15:7] (9 bits é±µivalent à ±0 bits DATA[15:6]/2)
+
+              VResPix.C.y = VCurPix.F.PixAddr / 2;
+    
+              // Calcul de X : REGION_HEADER[5:0]*16+DATA[5:3]*2+DATA[6] xor DATA[7]
+
+              VResPix.C.x =  (VCurRegHead.F.Reg * 16) +  (VCurPix.F.PeAddr * 2) + (VCurPix.B.b6 ^ VCurPix.B.b7);
+
+              // Add in destination array
+
+              if ( VPixCntInFr > MIS1__BT_FR_DEC_MAX_PIX_NB) {
+                err_warning (( ERR_OUT, "Cant add pixel, destination list is full with %d pixels  : AcqId = %d, FrId = %d", MIS1__BT_FR_DEC_MAX_PIX_NB, PtSrc->AcqId, VFrCnt - 1 ));
+              }
+
+              else {
+                *VPtResPix = VResPix;
+                VPtResPix++;
+              }
+ 
+              // Print
+              // 06/06/2021 : Add VSrcW16  print
+              
+
+              if ( VPrintLvlAbs >= 2  ) {
+                msg (( MSG_OUT, "VSrcW16 = %X [H] => PixAddr = %d, PE = %d, Code = %d => Pixel : x = %d, y = %d", VSrcW16, VCurPix.F.PixAddr,  VCurPix.F.PeAddr,  VCurPix.F.Code, VResPix.C.x, VResPix.C.y  ));
+              }
+              
+              
+              
+              #else             
+              
+              VCurPix.W16 = VSrcW16;
+              
+              #ifdef  MIS1__CC_USE_BT_FBtDecStdPixMSis2Dbg
+              
+                VPixNbInCluster = MIS1__BT_FBtDecStdPixMSis2Dbg ( VCurPix, VCurRegHead.F.Reg, VPtResPix,  MIS1__BT_FR_DEC_MAX_PIX_NB -  VPixCntInFr /* MaxESzAResPix */, MIS1__BT_VGBtDecStdPixMSis2PrintLvl, VDecPixStrPrint, VDecPixStrPrintSz  );
+                                
+                if (  MIS1__BT_VGBtDecStdPixMSis2PrintLvl > 0 ) {
+                  msg (( MSG_OUT, "MSis 2 cluster decoding : %s", VDecPixStrPrint ));
+                }
+              
+              #else
+                VPixNbInCluster = MIS1__BT_FBtDecStdPixMSis2 ( VCurPix, VCurRegHead.F.Reg, VPtResPix,  MIS1__BT_FR_DEC_MAX_PIX_NB -  VPixCntInFr /* MaxESzAResPix */  );
+              #endif
+              
+              
+                                           
+              
+              if ( VPixNbInCluster < 0 ) {
+                err_warning (( ERR_OUT, "Cant add pixel, decoding error OR destination list is full ? Space for %d pixels available : AcqId = %d, FrId = %d", MIS1__BT_FR_DEC_MAX_PIX_NB -  VPixCntInFr, PtSrc->AcqId, VFrCnt - 1 ));
+              }
+ 
+              else {
+                VPixCntInFr   += VPixNbInCluster;
+                VPixCntInAcq  += VPixNbInCluster;
+                VPtResPix     += VPixNbInCluster; // WARNING !!!! => Check if it works 
+              }
+ 
+ 
+              if ( VPrintLvlAbs >= 2  ) {
+                msg (( MSG_OUT, "VSrcW16 = %X [H] => PixAddr = %d, PE = %d, Code = %d => Pixel : x = %d, y = %d", VSrcW16, VCurPix.F.PixAddr,  VCurPix.F.PeAddr,  VCurPix.F.Code, VResPix.C.x, VResPix.C.y  ));
+              }
+
+              
+              #endif //  End of #ifdef PREVIOUS_DECODING_FOR_MSIS1
+              
+
+            }
+            
+            
+            // End of frame => Update frame header info
+            
+            if ( VFrEnd ) {
+              
+              VPtFrDecHead->Errors          = 0;                              // Not handled now 25/05/2021
+              VPtFrDecHead->ATrigPosW16[0]  = 0;                              // Not handled now 25/05/2021
+              VPtFrDecHead->ATrigPosW16[MIS1__BT_FR_DEC_MAX_TRIG_NB - 1] = 0; // Not handled now 25/05/2021
+              
+              // VPtFrDecHead->FrDataSzW16     = 0; // Calculated before
+              // VPtFrDecHead->MSisFrTrail.W16 = 0; // Calculated before
+              // VPtFrDecHead->CheckSum        = 0; // Calculated before
+              
+              VPtFrDecHead->RegionNb        = VRegCntInFr;
+              VPtFrDecHead->FiredPixNb      = VPixCntInFr;
+
+
+
+              // Frame too long => Exits on error
+              // No time now to handle it in a better way => TBD later
+              // Upgraded on 29/05/2021
+              // If it is the last frame of Acq => Warning, because the frame is probably only cut
+              // If it is NOT the last frame of Acq => Error because it should not happne => There is a problem
+              // Upgraded on 11/10/2021
+              // If it is NOT the last frame of Acq => Error, returns -2, before -1 was returned
+
+              if ( VFrTooLong ) {
+
+
+                if ( PrintLvl < 0 ) {
+                  msg (( MSG_OUT, "*********************** ACQ %d MSis = %d FR %d TOO LONG = %d W16, VW16Nb = %d, VPixCntInFr = %d ******************************", PtDest->AcqId, MSisId, VFrCnt, VPtFrDecHead->FrDataSzW16, VW16Nb, VPixCntInFr  ));
+                }
+
+                
+                PtDest->ResAFrNbTrunc[MSisId]++; // Update truncated frames counter - 30/05/2021
+
+                MIS1__BT_VGDecodecFrWarnErr++;
+
+                if ( VFrCnt >= PtSrc->FrNb ) {
+                  VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC_LAST_FR;
+                  // err_warning (( ERR_OUT, "Stop frame processing max W16 nb = %d reached => VFrCnt = %d >= FrNbInAcq = %d => Last frame cut", VW16Nb, VFrCnt, PtSrc->FrNb ));
+                }
+
+                else {
+                  VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC;
+                  err_error (( ERR_OUT, "Stop frame processing max W16 nb = %d reached => VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, VFrCnt, PtSrc->FrNb ));
+                  // return (-2);  // 10/10/2021 return (-2), before it was return (-1)
+                  
+                  // Since 11/10/2021
+                  
+                  VRetOk = -2;
+                  break;
+                  
+                }
+
+             } // End if ( VFrTooLong )
+
+
+
+
+
+
+
+
+
+
+
+              // Normal end of frame => break frame decoding loop
+              
+              break;
+            }
+            
+          } // End while (1) frame scanning
+          
+          
+          VPtFrDecHead++;
+          
+        }
+        
+        // Fake header
+        
+        else {
+          
+          VFakeHdCnt++;
+          
+          if ( VPrintLvlAbs >= 1  ) {
+            msg (( MSG_OUT, "Fake header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFakeHdCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
+          }
+          
+        }
+        
+        
+      } // End frame processing
+      
+      
+      
+
+    } // End for
+    
+    
+    // Update results
+    
+    PtDest->ParFrNbInSrcAcq           = PtSrc->FrNb;
+    
+    
+    PtDest->ResAFrNb[MSisId]          = VFrCnt;
+    PtDest->ResAFrNbWoTrailer[MSisId] = VFrWithoutTrailerCnt;
+    PtDest->ResAFrFakeHeadCnt[MSisId] = VFakeHdCnt;
+    PtDest->ResARegNb[MSisId]         = VRegCntInAcq;
+    PtDest->ResAPixNb[MSisId]         = VPixCntInAcq;
+    
+    
+    if ( (VFrCnt == 0) || (VFakeHdCnt > 0) ) {
+      err_error (( ERR_OUT, "Error : MSisId = %d, VFrCnt = %d, VFakeHdCnt = %d", MSisId, VFrCnt, VFakeHdCnt ));
+      VRetOk = -1;
+    }
+
+    
+    if ( VPrintLvlAbs  ) {
+
+      msg (( MSG_OUT, "" ));
+      msg (( MSG_OUT, "%d frames found, %d fake headers found", VFrCnt, VFakeHdCnt ));
+      msg (( MSG_OUT, "ViW16 = %d", ViW16 ));
+      
+      msg (( MSG_OUT, "" ));
+    }
+    
+    
+    #ifndef CC_NOT_CPP_BUILDER
+    
+    if ( MeasExecTime ) {
+      VExecTimeUs = TIME__FMeasTimeUsEnd ( 0 /* Index */ );
+    }
+    
+    else {
+      VExecTimeUs = 0;
+    }
+    
+    #else
+    
+    // You can implement here exec tiome measurement for compiler <> C++ Builder
+    
+    VExecTimeUs = 0; // No exec time measurement implementation => Returns 0
+    
+    
+    #endif
+    
+    
+    
+    
+    // Before 11/10/2021 // return (VExecTimeUs * VRetOk );
+    
+    // Since 11/10/2021
+    
+    if ( VRetOk < 0 ) {
+      return ( VRetOk );
+    }
+    
+    
+    return (VExecTimeUs);
+}
+  
+
+
+
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl )
+*
+* \brief   : Decode the frames for one MSis 1 / 2.X : List frames, exytract fr header, fr cnt but NO PIXELS DECODING  \n
+*
+* \param   : PtSrc    - Pointer to source record MIS1__TBtAcqW16A
+*
+* \param   : PtDest   - Pointer to destination record MIS1__TBtAcqDec
+*
+* \param   : MSisId   - If of the MSis to deocde 0 to MIS1__BT_MAX_REAL_MSIS_NB_ACQ-1
+*
+* \param   : FrNb     - Frames nb to convert, if -1 => All frames from  source record (NOT HANDLED NOW => Full frame decoding)
+*          :
+* \param   : MeasExecTime - Measure exec time 0 = No, 1 = Yes
+*
+* \param   : PrintLvl     - Debug print level, 0 = No, 1 = Print record sizes, 2 = More print, to be implemented
+*          :
+*          :
+*          :
+* \return  : Execution time in us or error code
+*          : >=  0 - Execution time in us
+*          : < 0   - Error code
+*          :
+* \warning : Globals   :
+* \warning : Remark    : WARNING => ONLY 2 channels IMPLEMENTED on 22/05/2021
+* \warning : Level     :
+*          :
+* \warning : Items not filled now :
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 25/05/2021
+* \date    : Rev       : 08/06/2021 - NoTrailer field update
+* \date    : Rev       : 17/06/2024 - MSis 2, 2.X pixels (cluster) decoding handling
+* \date    : Rev       : 
+* \date    : Doc date  : 24/05/2021
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+
+
+
+double MIS1__BT_FBtDecodeFr ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl ) {
+  
+  
+  double VExecTimeUsRetErr; //  value < 0 => Error, value >=0 => Ok and value is execution time in us
+  
+  
+  switch ( MIS1__VGMSisVersion ) {
+    
+    case 0 : {
+      err_error (( ERR_OUT, "Abort MSis version =  MSis 0 is not supported by lib" ));
+      VExecTimeUsRetErr = -1;
+      break;
+    } 
+
+    case 1 : {
+      VExecTimeUsRetErr = MIS1__BT_FBtDecodeFrMSis1 ( PtSrc, PtDest, MSisId, FrNb, MeasExecTime, PrintLvl );
+      break;
+    }  
+
+    case 2 : {
+      VExecTimeUsRetErr = MIS1__BT_FBtDecodeFrMSis2 ( PtSrc, PtDest, MSisId, FrNb, MeasExecTime, PrintLvl );
+      break;
+    }  
+
+    case 21 : {
+      VExecTimeUsRetErr = MIS1__BT_FBtDecodeFrMSis2 ( PtSrc, PtDest, MSisId, FrNb, MeasExecTime, PrintLvl );
+      break;
+    }  
+
+    default : {
+      err_error (( ERR_OUT, "Abort MSis version =  %d is not supported by lib", MIS1__VGMSisVersion ));
+      VExecTimeUsRetErr = -1;
+      break;
+    }  
+
+    
+  }  
+  
+  return (VExecTimeUsRetErr);
+}
+  
+
+
+// Copy before upgrade for MSis 2, 2.X handling (clusterization)
+// The following function has been used for all MSis 1 BT data analysis
+// 17/06/2024
+
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : double MIS1__BT_FBtDecodeFr_before_170624 ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl )
+*
+* \brief   : Decode the frames for one MSis 1 : List frames, exytract fr header, fr cnt but NO PIXELS DECODING  \n
+*          : Functions used for ALL MSis 1 BT data decoding, renamed with suffix _170624 before upgrade of lib for MSis 2
+*
+* \param   : PtSrc    - Pointer to source record MIS1__TBtAcqW16A
+*
+* \param   : PtDest   - Pointer to destination record MIS1__TBtAcqDec
+*
+* \param   : MSisId   - If of the MSis to deocde 0 to MIS1__BT_MAX_REAL_MSIS_NB_ACQ-1
+*
+* \param   : FrNb     - Frames nb to convert, if -1 => All frames from  source record (NOT HANDLED NOW => Full frame decoding)
+*          :
+* \param   : MeasExecTime - Measure exec time 0 = No, 1 = Yes
+*
+* \param   : PrintLvl     - Debug print level, 0 = No, 1 = Print record sizes, 2 = More print, to be implemented
+*          :
+*          :
+*          :
+* \return  : Execution time in us or error code
+*          : >=  0 - Execution time in us
+*          : < 0   - Error code
+*          :
+* \warning : Globals   :
+* \warning : Remark    : WARNING => ONLY 2 channels IMPLEMENTED on 22/05/2021
+* \warning : Level     :
+*          :
+* \warning : Items not filled now :
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 25/05/2021
+* \date    : Rev       : 08/06/2021 - NoTrailer field update
+* \date    : Rev       : 
+* \date    : Doc date  : 24/05/2021
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+
+
+double MIS1__BT_FBtDecodeFr_before_170624 ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, SInt8 PrintLvl ) {
+  
+  SInt32      VRetOk;
+  
+  SInt8       VPrintLvlAbs;
+  
+  double      VExecTimeUs;
+  
+  SInt32      VSrcW16;    // W16 to convert
+  // UInt16*     VPtSrcW16;  // Pointer to W16 to convert
+  
+  UInt32      VW16Nb;     // Total W16 nb to process for this MSis 1
+  SInt32      ViW16;      // Index of W16 processed
+  SInt32      VFrCnt;     // Counter of detected frames = counter of MSis 1 frame headers in data stream
+  SInt32      VFakeHdCnt; // Counter of fake headers => first W16 is header tag but not following 7 W16
+  SInt32      VFrWithoutTrailerCnt; // Counter of frames without trailer
+  SInt32      ViW16CurHead; // First W16 of current header
+  
+  
+
+  TW128As8W16 VFrHd;   // Frame header (128 bits)
+  UInt16      VFrHdW0; // Frame header W0
+  UInt16      VFrHdW1; // Frame header W1
+  UInt16      VFrHdW2; // Frame header W2
+  UInt16      VFrHdW3; // Frame header W3
+  UInt16      VFrHdW4; // Frame header W4
+  UInt16      VFrHdW5; // Frame header W5
+  UInt16      VFrHdW6; // Frame header W6
+  UInt16      VFrHdW7; // Frame header W7
+  
+
+  
+  SInt32      VRegCntInFr;        // Counter of regiosn in frame
+  SInt32      VRegCntInAcq;       // Counter of regiosn in Acq
+  SInt32      VPixCntInFr;        // Counter of pixels in each frame
+  SInt32      VPixCntInAcq;       // Counter of pixels in Acq
+  
+  // Flags
+  
+  UInt8       VFrWithoutTrailer;  // Flag to handle frames without a trailer at the end, a header can starts
+  UInt8       VTrailerDetected;   // Flag => trailer detected in current frame scanning
+
+  UInt8       VFrTooLong;         // Flag => frame length > max possible
+  UInt8       VFrEnd;             // Flag => end of frame = OR of previois flags
+  
+  // Pixels decoding 25/05/2021
+  
+  MIS1__TDsRegHeader VCurRegHead; // Current region
+  MIS1__TStdPix      VCurPix;     // Current pixel
+  
+  MIS1__TPixXY       VResPix;     // Decoded pixel x,y format to be stored in ResAAAFrPix[MSisId][FrId][PixNo]
+  MIS1__TPixXY*      VPtResPix;   // Pointer to current result pixel in ResAAAFrPix[MSisId][FrId][PixNo]
+  
+
+  MIS1__TBtFrDecHead* VPtFrDecHead;
+  
+  
+  VPrintLvlAbs = abs ( PrintLvl );
+  
+  // Check param
+  
+  // ----------------------------------------------
+  // WARNING
+  // ----------------------------------------------
+  //
+  // NO parameters checking to save execution time, it is done in ...
+  // => This function SHOULD not be called directly, but only via ...
+  // => In case you need to call it directly => Check parameters you provide
+  
+  // Measure exec time
+  
+  #ifndef CC_NOT_CPP_BUILDER
+  
+  if ( MeasExecTime ) {
+    TIME__FMeasTimeUsBegin ( 0 /* Index */ );
+  }
+  
+  
+  #else
+
+  // You can implement here exec tiome measurement for compiler <> C++ Builder
+  
+
+  #endif
+  
+  
+  // Propagates AcqId and Triggers nb
+  
+  PtDest->AcqId  = PtSrc->AcqId;
+  PtDest->TrigNb = PtSrc->AcqRawHead.Trigs.TrigNb; // Added on 30/05/2021
+  
+  
+  // Init var
+  
+  VRetOk       = 1;
+  
+  VW16Nb       = PtSrc->MSisW16Nb;
+  ViW16CurHead = 0;
+  VFrCnt       = 0;
+  VFakeHdCnt   = 0;
+  VFrWithoutTrailerCnt = 0;
+  
+  
+  VFrWithoutTrailer = 0;
+  VTrailerDetected  = 0;
+  VFrTooLong        = 0;
+  VFrEnd            = 0;
+  
+  
+  VRegCntInFr  = 0;
+  VPixCntInFr  = 0;
+  VRegCntInAcq = 0;
+  VPixCntInAcq = 0;
+  
+  VCurRegHead.W16 = 0;
+  VCurPix.W16     = 0;
+    
+  VResPix.C.x = 0;
+  VResPix.C.y = 0;
+    
+  VPtResPix = &PtDest->ResAAAFrPix[MSisId][0 /* Fr no */][0 /* Pix no */];
+ 
+    
+  
+  VPtFrDecHead = &PtDest->ResAAFrHead[MSisId][0];
+  
+  // Reset frames truncated & errors counters - 30/05/2021
+
+  PtDest->ResAFrNbTrunc[MSisId]     = 0;
+  PtDest->ResAFrNbErr[MSisId]       = 0;
+
+  // Reset decoding function warnings + errors counter - 30/05/2021
+
+  MIS1__BT_VGDecodecFrWarnErr = 0;
+
+  
+  // -------------------------------------------------------------
+  // Frames decoding
+  // -------------------------------------------------------------
+  
+  
+  if ( VPrintLvlAbs ) {
+    msg (( MSG_OUT, "Decode MSis No %d, Src frame = %d W16", MSisId, VW16Nb ));
+  }
+  
+  
+  for ( ViW16 = 0; ViW16 < VW16Nb;  ) {
+    
+    // Try to handle frames without trailer
+    //  - the first header field (W0) has already been detected at end of previous frame, don't read it again it is already here
+    
+    if ( VFrWithoutTrailer == 0 ) {
+      VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+    }
+    
+    // Detects first W16, W0 of a frame header
+    
+    if ( (VSrcW16 & 0xFF00) == 0xFE00 ) {
+      
+      ViW16CurHead = ViW16 - 1;
+      
+      VFrHdW0 = VSrcW16;
+      
+      // Checks that next 7 are also fraem header tags
+      
+      VFrHdW1 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW2 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW3 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW4 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW5 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW6 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW7 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+
+      // Header confirmed
+      
+      // if ( 1 ) {
+        
+        if ( ((VFrHdW1 & 0xFF00) == 0xFE00) && ((VFrHdW2 & 0xFF00) == 0xFE00) && ((VFrHdW3 & 0xFF00) == 0xFE00) && ((VFrHdW4 & 0xFF00) == 0xFE00) && ((VFrHdW5 & 0xFF00) == 0xFE00) && ((VFrHdW6 & 0xFF00) == 0xFE00) && ((VFrHdW7 & 0xFF00) == 0xFE00)  ) {
+          
+          // Reset regions cnt, fired pixels cnt, flags
+
+          VRegCntInFr       = 0;
+          VPixCntInFr       = 0;
+          
+          VFrWithoutTrailer = 0;
+          VTrailerDetected  = 0;
+          VFrTooLong        = 0;
+          VFrEnd            = 0;
+          
+          VCurRegHead.W16   = 0; // Resets region header
+          
+          // Update frame header results
+          
+          VPtFrDecHead->MSisId = MSisId;
+          VPtFrDecHead->FrId   = VFrCnt;
+          
+          // Sets ptr to destination pixels stream
+
+          VPtResPix = &PtDest->ResAAAFrPix[MSisId][VFrCnt][0 /* Pix No */];
+          
+          VFrCnt++;
+          
+          // Extract header
+          
+          VPtFrDecHead->MSisFrHead.AW16[0] = VFrHdW0;
+          VPtFrDecHead->MSisFrHead.AW16[1] = VFrHdW1;
+          VPtFrDecHead->MSisFrHead.AW16[2] = VFrHdW2;
+          VPtFrDecHead->MSisFrHead.AW16[3] = VFrHdW3;
+          VPtFrDecHead->MSisFrHead.AW16[4] = VFrHdW4;
+          VPtFrDecHead->MSisFrHead.AW16[5] = VFrHdW5;
+          VPtFrDecHead->MSisFrHead.AW16[6] = VFrHdW6;
+          VPtFrDecHead->MSisFrHead.AW16[7] = VFrHdW7;
+          
+          // Extract frames counter
+          
+          VPtFrDecHead->FrCnt = (VFrHdW0 &0xFF) + ((VFrHdW1 & 0xFF) << 8) + ((VFrHdW2 & 0xFF) << 16) + ((VFrHdW3 & 0xFF) << 24);
+          
+          if ( VPrintLvlAbs >= 3  ) {
+            msg (( MSG_OUT, "Header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFrCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
+            msg (( MSG_OUT, "FrCnt = %d", VPtFrDecHead->FrCnt ));
+          }
+          
+          
+          VPtFrDecHead->FirstDataW16Pos = ViW16CurHead + 8;
+          
+          // Result fields not calculated now
+          
+          VPtFrDecHead->Errors          = 0;
+          VPtFrDecHead->NoTrailer       = 0;  // 08/06/2021
+          VPtFrDecHead->FrDataSzW16     = 0;
+          VPtFrDecHead->RegionNb        = 0;
+          VPtFrDecHead->FiredPixNb      = 0;
+          VPtFrDecHead->MSisFrTrail.W16 = 0;
+          VPtFrDecHead->CheckSum        = 0;
+          VPtFrDecHead->ATrigPosW16[0]  = 0;
+          VPtFrDecHead->ATrigPosW16[MIS1__BT_FR_DEC_MAX_TRIG_NB - 1] = 0;
+
+
+          // Processing frame
+
+          while (1) {
+            
+            VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+            ViW16++;
+            
+            // Detects region
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFD00  ) {
+              
+              VRegCntInFr++;
+              VRegCntInAcq++;
+              
+              VCurRegHead.W16 = VSrcW16;
+              
+              // 06/06/2021
+              // - Add print of Region.F.Reg
+              // - FrCnt dispplay as ud
+              
+              if ( VPrintLvlAbs >= 2 ) {
+                msg (( MSG_OUT, "" ));
+                msg (( MSG_OUT, "Fr No %.3ud : MSis 1 FrCnt = %d - Region No %.2d - Region.F.Reg = %d", VFrCnt - 1, VPtFrDecHead->FrCnt, VRegCntInFr - 1, VCurRegHead.F.Reg ));
+              }
+
+              continue;
+            }
+            
+            
+            // Detects trailer
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFF00 ) {
+
+              VTrailerDetected = 1;
+
+              VPtFrDecHead->MSisFrTrail.W16 = VSrcW16;
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+              
+              // Reads checksum
+              
+              VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+              ViW16++;
+              
+              VPtFrDecHead->CheckSum = VSrcW16;
+              
+              if ( VPrintLvlAbs >= 3 ) {
+                msg (( MSG_OUT, "Fr No %.3d MSisFrCnt = %.6d - Trailer", VFrCnt, VPtFrDecHead->FrCnt ));
+              }
+
+            }
+            
+            // Detects header => frame without trailer at the end
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFE00 ) {
+              
+              VFrWithoutTrailer = 1;
+              VFrWithoutTrailerCnt++;
+              VPtFrDecHead->NoTrailer = 1;  // 08/06/2021
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+            }
+            
+            // Frame is too long : Decoding bug or MSis 1 side bug or unknown info / MSis 1 data stream
+            
+            if ( ViW16 >= VW16Nb  ) {              
+                
+              VFrTooLong = 1;
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+            }
+            
+            
+            VFrEnd = VTrailerDetected || VFrWithoutTrailer || VFrTooLong;
+            
+            // Pixel detected : Current W16 is not a region header, an empty W16 and is not an end of frame tag
+
+            // if ( (VFrEnd == 0) && ((VSrcW16 & 0xFF00) != 0xFD00) && (VSrcW16 != 0xFCAA) ) {  // Test on region not needed now with continue at end of region block
+
+            if ( (VFrEnd == 0) && (VSrcW16 != 0xFCAA) ) {
+
+              VPixCntInFr++;
+              VPixCntInAcq++;
+              
+              VCurPix.W16 = VSrcW16;
+              
+              // Calcul de Y : DATA[15:7] (9 bits é±µivalent à ±0 bits DATA[15:6]/2)
+
+              VResPix.C.y = VCurPix.F.PixAddr / 2;
+    
+              // Calcul de X : REGION_HEADER[5:0]*16+DATA[5:3]*2+DATA[6] xor DATA[7]
+
+              VResPix.C.x =  (VCurRegHead.F.Reg * 16) +  (VCurPix.F.PeAddr * 2) + (VCurPix.B.b6 ^ VCurPix.B.b7);
+
+              // Add in destination array
+
+              if ( VPixCntInFr > MIS1__BT_FR_DEC_MAX_PIX_NB) {
+                err_warning (( ERR_OUT, "Cant add pixel, destination list is full with %d pixels  : AcqId = %d, FrId = %d", MIS1__BT_FR_DEC_MAX_PIX_NB, PtSrc->AcqId, VFrCnt - 1 ));
+              }
+
+              else {
+                *VPtResPix = VResPix;
+                VPtResPix++;
+              }
+
+              // Print
+              // 06/06/2021 : Add VSrcW16  print
+              
+
+              if ( VPrintLvlAbs >= 2  ) {
+                msg (( MSG_OUT, "VSrcW16 = %X [H] => PixAddr = %d, PE = %d, Code = %d => Pixel : x = %d, y = %d", VSrcW16, VCurPix.F.PixAddr,  VCurPix.F.PeAddr,  VCurPix.F.Code, VResPix.C.x, VResPix.C.y  ));
+              }
+
+            }
+            
+            
+            // End of frame => Update frame header info
+            
+            if ( VFrEnd ) {
+              
+              VPtFrDecHead->Errors          = 0;                              // Not handled now 25/05/2021
+              VPtFrDecHead->ATrigPosW16[0]  = 0;                              // Not handled now 25/05/2021
+              VPtFrDecHead->ATrigPosW16[MIS1__BT_FR_DEC_MAX_TRIG_NB - 1] = 0; // Not handled now 25/05/2021
+              
+              // VPtFrDecHead->FrDataSzW16     = 0; // Calculated before
+              // VPtFrDecHead->MSisFrTrail.W16 = 0; // Calculated before
+              // VPtFrDecHead->CheckSum        = 0; // Calculated before
+              
+              VPtFrDecHead->RegionNb        = VRegCntInFr;
+              VPtFrDecHead->FiredPixNb      = VPixCntInFr;
+
+
+
+              // Frame too long => Exits on error
+              // No time now to handle it in a better way => TBD later
+              // Upgraded on 29/05/2021
+              // If it is the last frame of Acq => Warning, because the frame is probably only cut
+              // If it is NOT the last frame of Acq => Error because it should not happne => There is a problem
+              // Upgraded on 11/10/2021
+              // If it is NOT the last frame of Acq => Error, returns -2, before -1 was returned
+
+              if ( VFrTooLong ) {
+
+
+                if ( PrintLvl < 0 ) {
+                  msg (( MSG_OUT, "*********************** ACQ %d MSis = %d FR %d TOO LONG = %d W16, VW16Nb = %d, VPixCntInFr = %d ******************************", PtDest->AcqId, MSisId, VFrCnt, VPtFrDecHead->FrDataSzW16, VW16Nb, VPixCntInFr  ));
+                }
+
+                
+                PtDest->ResAFrNbTrunc[MSisId]++; // Update truncated frames counter - 30/05/2021
+
+                MIS1__BT_VGDecodecFrWarnErr++;
+
+                if ( VFrCnt >= PtSrc->FrNb ) {
+                  VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC_LAST_FR;
+                  // err_warning (( ERR_OUT, "Stop frame processing max W16 nb = %d reached => VFrCnt = %d >= FrNbInAcq = %d => Last frame cut", VW16Nb, VFrCnt, PtSrc->FrNb ));
+                }
+
+                else {
+                  VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC;
+                  err_error (( ERR_OUT, "Stop frame processing max W16 nb = %d reached => VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, VFrCnt, PtSrc->FrNb ));
+                  // return (-2);  // 10/10/2021 return (-2), before it was return (-1)
+                  
+                  // Since 11/10/2021
+                  
+                  VRetOk = -2;
+                  break;
+                  
+                }
+
+             } // End if ( VFrTooLong )
+
+
+
+
+
+
+
+
+
+
+
+              // Normal end of frame => break frame decoding loop
+              
+              break;
+            }
+            
+          } // End while (1) frame scanning
+          
+          
+          VPtFrDecHead++;
+          
+        }
+        
+        // Fake header
+        
+        else {
+          
+          VFakeHdCnt++;
+          
+          if ( VPrintLvlAbs >= 1  ) {
+            msg (( MSG_OUT, "Fake header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFakeHdCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
+          }
+          
+        }
+        
+        
+      } // End frame processing
+      
+      
+      
+
+    } // End for
+    
+    
+    // Update results
+    
+    PtDest->ParFrNbInSrcAcq           = PtSrc->FrNb;
+    
+    
+    PtDest->ResAFrNb[MSisId]          = VFrCnt;
+    PtDest->ResAFrNbWoTrailer[MSisId] = VFrWithoutTrailerCnt;
+    PtDest->ResAFrFakeHeadCnt[MSisId] = VFakeHdCnt;
+    PtDest->ResARegNb[MSisId]         = VRegCntInAcq;
+    PtDest->ResAPixNb[MSisId]         = VPixCntInAcq;
+    
+    
+    if ( (VFrCnt == 0) || (VFakeHdCnt > 0) ) {
+      err_error (( ERR_OUT, "Error : MSisId = %d, VFrCnt = %d, VFakeHdCnt = %d", MSisId, VFrCnt, VFakeHdCnt ));
+      VRetOk = -1;
+    }
+
+    
+    if ( VPrintLvlAbs  ) {
+
+      msg (( MSG_OUT, "" ));
+      msg (( MSG_OUT, "%d frames found, %d fake headers found", VFrCnt, VFakeHdCnt ));
+      msg (( MSG_OUT, "ViW16 = %d", ViW16 ));
+      
+      msg (( MSG_OUT, "" ));
+    }
+    
+    
+    #ifndef CC_NOT_CPP_BUILDER
+    
+    if ( MeasExecTime ) {
+      VExecTimeUs = TIME__FMeasTimeUsEnd ( 0 /* Index */ );
+    }
+    
+    else {
+      VExecTimeUs = 0;
+    }
+    
+    #else
+    
+    // You can implement here exec tiome measurement for compiler <> C++ Builder
+    
+    VExecTimeUs = 0; // No exec time measurement implementation => Returns 0
+    
+    
+    #endif
+    
+    
+    
+    
+    // Before 11/10/2021 // return (VExecTimeUs * VRetOk );
+    
+    // Since 11/10/2021
+    
+    if ( VRetOk < 0 ) {
+      return ( VRetOk );
+    }
+    
+    
+    return (VExecTimeUs);
+}
+  
+
+
+  
+
+// Copy before upgrade to stdy the problem of long framess
+
+
+
+double MIS1__BT_FBtDecodeFr__before_160621 ( MIS1__TBtAcqW16A* PtSrc, MIS1__TBtAcqDec* PtDest, SInt8 MSisId, SInt32 FrNb, UInt8 MeasExecTime, UInt8 PrintLvl ) {
+  
+  SInt32      VRetOk;
+  double      VExecTimeUs;
+  
+  SInt32      VSrcW16;    // W16 to convert
+  // UInt16*     VPtSrcW16;  // Pointer to W16 to convert
+  
+  UInt32      VW16Nb;     // Total W16 nb to process for this MSis 1
+  SInt32      ViW16;      // Index of W16 processed
+  SInt32      VFrCnt;     // Counter of detected frames = counter of MSis 1 frame headers in data stream
+  SInt32      VFakeHdCnt; // Counter of fake headers => first W16 is header tag but not following 7 W16
+  SInt32      VFrWithoutTrailerCnt; // Counter of frames without trailer
+  SInt32      ViW16CurHead; // First W16 of current header
+  
+  
+  
+  TW128As8W16 VFrHd;   // Frame header (128 bits)
+  UInt16      VFrHdW0; // Frame header W0
+  UInt16      VFrHdW1; // Frame header W1
+  UInt16      VFrHdW2; // Frame header W2
+  UInt16      VFrHdW3; // Frame header W3
+  UInt16      VFrHdW4; // Frame header W4
+  UInt16      VFrHdW5; // Frame header W5
+  UInt16      VFrHdW6; // Frame header W6
+  UInt16      VFrHdW7; // Frame header W7
+  
+  
+  
+  SInt32      VRegCntInFr;        // Counter of regiosn in frame
+  SInt32      VRegCntInAcq;       // Counter of regiosn in Acq
+  SInt32      VPixCntInFr;        // Counter of pixels in each frame
+  SInt32      VPixCntInAcq;       // Counter of pixels in Acq
+  
+  // Flags
+  
+  UInt8       VFrWithoutTrailer;  // Flag to handle frames without a trailer at the end, a header can starts
+  UInt8       VTrailerDetected;   // Flag => trailer detected in current frame scanning
+  UInt8       VFrTooLong;         // Flag => frame length > max possible
+  UInt8       VFrEnd;             // Flag => end of frame = OR of previois flags
+  
+  // Pixels decoding 25/05/2021
+  
+  MIS1__TDsRegHeader VCurRegHead; // Current region
+  MIS1__TStdPix      VCurPix;     // Current pixel
+  
+  MIS1__TPixXY       VResPix;     // Decoded pixel x,y format to be stored in ResAAAFrPix[MSisId][FrId][PixNo]
+  MIS1__TPixXY*      VPtResPix;   // Pointer to current result pixel in ResAAAFrPix[MSisId][FrId][PixNo]
+  
+  
+  MIS1__TBtFrDecHead* VPtFrDecHead;
+  
+  
+  // Check param
+  
+  // ----------------------------------------------
+  // WARNING
+  // ----------------------------------------------
+  //
+  // NO parameters checking to save execution time, it is done in ...
+  // => This function SHOULD not be called directly, but only via ...
+  // => In case you need to call it directly => Check parameters you provide
+  
+  // Measure exec time
+  
+  #ifndef CC_NOT_CPP_BUILDER
+  
+  if ( MeasExecTime ) {
+    TIME__FMeasTimeUsBegin ( 0 /* Index */ );
+  }
+  
+  
+  #else
+  
+  // You can implement here exec tiome measurement for compiler <> C++ Builder
+  
+  
+  #endif
+  
+  
+  // Propagates AcqId and Triggers nb
+  
+  PtDest->AcqId  = PtSrc->AcqId;
+  PtDest->TrigNb = PtSrc->AcqRawHead.Trigs.TrigNb; // Added on 30/05/2021
+  
+  
+  // Init var
+  
+  VRetOk       = 1;
+  
+  VW16Nb       = PtSrc->MSisW16Nb;
+  ViW16CurHead = 0;
+  VFrCnt       = 0;
+  VFakeHdCnt   = 0;
+  VFrWithoutTrailerCnt = 0;
+  
+  
+  VFrWithoutTrailer = 0;
+  VTrailerDetected  = 0;
+  VFrTooLong        = 0;
+  VFrEnd            = 0;
+  
+  
+  VRegCntInFr  = 0;
+  VPixCntInFr  = 0;
+  VRegCntInAcq = 0;
+  VPixCntInAcq = 0;
+  
+  VCurRegHead.W16 = 0;
+  VCurPix.W16     = 0;
+  
+  VResPix.C.x = 0;
+  VResPix.C.y = 0;
+  
+  VPtResPix = &PtDest->ResAAAFrPix[MSisId][0 /* Fr no */][0 /* Pix no */];
+  
+  
+  
+  VPtFrDecHead = &PtDest->ResAAFrHead[MSisId][0];
+  
+  // Reset frames truncated & errors counters - 30/05/2021
+  
+  PtDest->ResAFrNbTrunc[MSisId]     = 0;
+  PtDest->ResAFrNbErr[MSisId]       = 0;
+  
+  // Reset decoding function warnings + errors counter - 30/05/2021
+  
+  MIS1__BT_VGDecodecFrWarnErr = 0;
+  
+  
+  // -------------------------------------------------------------
+  // Frames decoding
+  // -------------------------------------------------------------
+  
+  
+  if ( PrintLvl ) {
+    msg (( MSG_OUT, "Decode MSis No %d, Src frame = %d W16", MSisId, VW16Nb ));
+  }
+  
+  
+  for ( ViW16 = 0; ViW16 < VW16Nb;  ) {
+    
+    // Try to handle frames without trailer
+    //  - the first header field (W0) has already been detected at end of previous frame, don't read it again it is already here
+    
+    if ( VFrWithoutTrailer == 0 ) {
+      VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+    }
+    
+    // Detects first W16, W0 of a frame header
+    
+    if ( (VSrcW16 & 0xFF00) == 0xFE00 ) {
+      
+      ViW16CurHead = ViW16 - 1;
+      
+      VFrHdW0 = VSrcW16;
+      
+      // Checks that next 7 are also fraem header tags
+      
+      VFrHdW1 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW2 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW3 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW4 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW5 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW6 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      VFrHdW7 = PtSrc->AAMsis[MSisId][ViW16];
+      ViW16++;
+      
+      // Header confirmed
+      
+      // if ( 1 ) {
+        
+        if ( ((VFrHdW1 & 0xFF00) == 0xFE00) && ((VFrHdW2 & 0xFF00) == 0xFE00) && ((VFrHdW3 & 0xFF00) == 0xFE00) && ((VFrHdW4 & 0xFF00) == 0xFE00) && ((VFrHdW5 & 0xFF00) == 0xFE00) && ((VFrHdW6 & 0xFF00) == 0xFE00) && ((VFrHdW7 & 0xFF00) == 0xFE00)  ) {
+          
+          // Reset regions cnt, fired pixels cnt, flags
+          
+          VRegCntInFr       = 0;
+          VPixCntInFr       = 0;
+          
+          VFrWithoutTrailer = 0;
+          VTrailerDetected  = 0;
+          VFrTooLong        = 0;
+          VFrEnd            = 0;
+          
+          VCurRegHead.W16   = 0; // Resets region header
+          
+          // Update frame header results
+          
+          VPtFrDecHead->MSisId = MSisId;
+          VPtFrDecHead->FrId   = VFrCnt;
+          
+          // Sets ptr to destination pixels stream
+          
+          VPtResPix = &PtDest->ResAAAFrPix[MSisId][VFrCnt][0 /* Pix No */];
+          
+          VFrCnt++;
+          
+          // Extract header
+          
+          VPtFrDecHead->MSisFrHead.AW16[0] = VFrHdW0;
+          VPtFrDecHead->MSisFrHead.AW16[1] = VFrHdW1;
+          VPtFrDecHead->MSisFrHead.AW16[2] = VFrHdW2;
+          VPtFrDecHead->MSisFrHead.AW16[3] = VFrHdW3;
+          VPtFrDecHead->MSisFrHead.AW16[4] = VFrHdW4;
+          VPtFrDecHead->MSisFrHead.AW16[5] = VFrHdW5;
+          VPtFrDecHead->MSisFrHead.AW16[6] = VFrHdW6;
+          VPtFrDecHead->MSisFrHead.AW16[7] = VFrHdW7;
+          
+          // Extract frames counter
+          
+          VPtFrDecHead->FrCnt = (VFrHdW0 &0xFF) + ((VFrHdW1 & 0xFF) << 8) + ((VFrHdW2 & 0xFF) << 16) + ((VFrHdW3 & 0xFF) << 24);
+          
+          if ( PrintLvl >= 3  ) {
+            msg (( MSG_OUT, "Header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFrCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
+            msg (( MSG_OUT, "FrCnt = %d", VPtFrDecHead->FrCnt ));
+          }
+          
+          
+          VPtFrDecHead->FirstDataW16Pos = ViW16CurHead + 8;
+          
+          // Result fields not calculated now
+          
+          VPtFrDecHead->Errors          = 0;
+          VPtFrDecHead->NoTrailer       = 0;  // 08/06/2021
+          VPtFrDecHead->FrDataSzW16     = 0;
+          VPtFrDecHead->RegionNb        = 0;
+          VPtFrDecHead->FiredPixNb      = 0;
+          VPtFrDecHead->MSisFrTrail.W16 = 0;
+          VPtFrDecHead->CheckSum        = 0;
+          VPtFrDecHead->ATrigPosW16[0]  = 0;
+          VPtFrDecHead->ATrigPosW16[MIS1__BT_FR_DEC_MAX_TRIG_NB - 1] = 0;
+          
+          
+          // Processing frame
+          
+          while (1) {
+            
+            VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+            ViW16++;
+            
+            // Detects region
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFD00  ) {
+              
+              VRegCntInFr++;
+              VRegCntInAcq++;
+              
+              VCurRegHead.W16 = VSrcW16;
+              
+              // 06/06/2021
+              // - Add print of Region.F.Reg
+              // - FrCnt dispplay as ud
+              
+              if ( PrintLvl >= 2 ) {
+                msg (( MSG_OUT, "" ));
+                msg (( MSG_OUT, "Fr No %.3ud : MSis 1 FrCnt = %d - Region No %.2d - Region.F.Reg = %d", VFrCnt - 1, VPtFrDecHead->FrCnt, VRegCntInFr - 1, VCurRegHead.F.Reg ));
+              }
+              
+              continue;
+            }
+            
+            
+            // Detects trailer
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFF00 ) {
+              
+              VTrailerDetected = 1;
+              
+              VPtFrDecHead->MSisFrTrail.W16 = VSrcW16;
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+              
+              // Reads checksum
+              
+              VSrcW16 = PtSrc->AAMsis[MSisId][ViW16];
+              ViW16++;
+              
+              VPtFrDecHead->CheckSum = VSrcW16;
+              
+              if ( PrintLvl >= 3 ) {
+                msg (( MSG_OUT, "Fr No %.3d MSisFrCnt = %.6d - Trailer", VFrCnt, VPtFrDecHead->FrCnt ));
+              }
+              
+            }
+            
+            // Detects header => frame without trailer at the end
+            
+            if ( (VSrcW16 & 0xFF00) == 0xFE00 ) {
+              
+              VFrWithoutTrailer = 1;
+              VFrWithoutTrailerCnt++;
+              VPtFrDecHead->NoTrailer = 1;  // 08/06/2021
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+            }
+            
+            // Frame is too long : Decoding bug or MSis 1 side bug or unknown info / MSis 1 data stream
+            
+            if ( ViW16 >= VW16Nb  ) {
+              VFrTooLong = 1;
+              
+              // Calc fr data size
+              
+              VPtFrDecHead->FrDataSzW16 = ViW16 - VPtFrDecHead->FirstDataW16Pos - 1;
+            }
+            
+            
+            VFrEnd = VTrailerDetected || VFrWithoutTrailer || VFrTooLong;
+            
+            // Pixel detected : Current W16 is not a region header, an empty W16 and is not an end of frame tag
+            
+            // if ( (VFrEnd == 0) && ((VSrcW16 & 0xFF00) != 0xFD00) && (VSrcW16 != 0xFCAA) ) {  // Test on region not needed now with continue at end of region block
+              
+              if ( (VFrEnd == 0) && (VSrcW16 != 0xFCAA) ) {
+                
+                VPixCntInFr++;
+                VPixCntInAcq++;
+                
+                VCurPix.W16 = VSrcW16;
+                
+                // Calcul de Y : DATA[15:7] (9 bits équivalent à 10 bits DATA[15:6]/2)
+                
+                VResPix.C.y = VCurPix.F.PixAddr / 2;
+                
+                // Calcul de X : REGION_HEADER[5:0]*16+DATA[5:3]*2+DATA[6] xor DATA[7]
+                
+                VResPix.C.x =  (VCurRegHead.F.Reg * 16) +  (VCurPix.F.PeAddr * 2) + (VCurPix.B.b6 ^ VCurPix.B.b7);
+                
+                // Add in destination array
+                
+                if ( VPixCntInFr > MIS1__BT_FR_DEC_MAX_PIX_NB) {
+                  err_warning (( ERR_OUT, "Cant add pixel, destination list is full with %d pixels  : AcqId = %d, FrId = %d", MIS1__BT_FR_DEC_MAX_PIX_NB, PtSrc->AcqId, VFrCnt - 1 ));
+                }
+                
+                else {
+                  *VPtResPix = VResPix;
+                  VPtResPix++;
+                }
+                
+                // Print
+                // 06/06/2021 : Add VSrcW16  print
+                
+                
+                if ( PrintLvl >= 2  ) {
+                  msg (( MSG_OUT, "VSrcW16 = %X [H] => PixAddr = %d, PE = %d, Code = %d => Pixel : x = %d, y = %d", VSrcW16, VCurPix.F.PixAddr,  VCurPix.F.PeAddr,  VCurPix.F.Code, VResPix.C.x, VResPix.C.y  ));
+                }
+                
+              }
+              
+              
+              // End of frame => Update frame header info
+              
+              if ( VFrEnd ) {
+                
+                VPtFrDecHead->Errors          = 0;                              // Not handled now 25/05/2021
+                VPtFrDecHead->ATrigPosW16[0]  = 0;                              // Not handled now 25/05/2021
+                VPtFrDecHead->ATrigPosW16[MIS1__BT_FR_DEC_MAX_TRIG_NB - 1] = 0; // Not handled now 25/05/2021
+                
+                // VPtFrDecHead->FrDataSzW16     = 0; // Calculated before
+                // VPtFrDecHead->MSisFrTrail.W16 = 0; // Calculated before
+                // VPtFrDecHead->CheckSum        = 0; // Calculated before
+                
+                VPtFrDecHead->RegionNb        = VRegCntInFr;
+                VPtFrDecHead->FiredPixNb      = VPixCntInFr;
+                
+                
+                
+                // Frame too long => Exits on error
+                // No time now to handle it in a better way => TBD later
+                // Upgraded on 29/05/2021
+                // If it is the last frame of Acq => Warning, because the frame is probably only cut
+                // If it is NOT the last frame of Acq => Error because it should not happne => There is a problem
+                
+                
+                if ( VFrTooLong ) {
+                  
+                  PtDest->ResAFrNbTrunc[MSisId]++; // Update truncated frames counter - 30/05/2021
+                  
+                  MIS1__BT_VGDecodecFrWarnErr++;
+                  
+                  if ( VFrCnt >= PtSrc->FrNb ) {
+                    VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC_LAST_FR;
+                    // err_warning (( ERR_OUT, "Stop frame processing max W16 nb = %d reached => VFrCnt = %d >= FrNbInAcq = %d => Last frame cut", VW16Nb, VFrCnt, PtSrc->FrNb ));
+                  }
+                  
+                  else {
+                    VPtFrDecHead->Errors = MIS1__BT_FR_ERR_TRUNC;
+                    err_error (( ERR_OUT, "Stop frame processing max W16 nb = %d reached => VFrCnt = %d < FrNbInAcq = %d => MSis 1 or decoding sw bug !", VW16Nb, VFrCnt, PtSrc->FrNb ));
+                    return (-1);
+                  }
+                  
+                } // End if ( VFrTooLong )
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                // Normal end of frame => break frame decoding loop
+                
+                break;
+              }
+              
+            } // End while (1) frame scanning
+            
+            
+            VPtFrDecHead++;
+            
+          }
+          
+          // Fake header
+          
+          else {
+            
+            VFakeHdCnt++;
+            
+            if ( PrintLvl >= 1  ) {
+              msg (( MSG_OUT, "Fake header detected (Cnt = %.4d) : W7 = %X, W6 = %X, W5 = %X, W4 = %X, W3 = %X, W2 = %X, W1 = %X , W0 = %X", VFakeHdCnt, VFrHdW7, VFrHdW6, VFrHdW5, VFrHdW4, VFrHdW3, VFrHdW2, VFrHdW1, VFrHdW0 ));
+            }
+            
+          }
+          
+          
+        } // End frame processing
+        
+        
+        
+        
+      } // End for
+      
+      
+      // Update results
+      
+      PtDest->ParFrNbInSrcAcq           = PtSrc->FrNb;
+      
+      
+      PtDest->ResAFrNb[MSisId]          = VFrCnt;
+      PtDest->ResAFrNbWoTrailer[MSisId] = VFrWithoutTrailerCnt;
+      PtDest->ResAFrFakeHeadCnt[MSisId] = VFakeHdCnt;
+      PtDest->ResARegNb[MSisId]         = VRegCntInAcq;
+      PtDest->ResAPixNb[MSisId]         = VPixCntInAcq;
+      
+      
+      if ( (VFrCnt == 0) || (VFakeHdCnt > 0) ) {
+        err_error (( ERR_OUT, "Error : MSisId = %d, VFrCnt = %d, VFakeHdCnt = %d", MSisId, VFrCnt, VFakeHdCnt ));
+        VRetOk = -1;
+      }
+      
+      
+      if ( PrintLvl  ) {
+        
+        msg (( MSG_OUT, "" ));
+        msg (( MSG_OUT, "%d frames found, %d fake headers found", VFrCnt, VFakeHdCnt ));
+        msg (( MSG_OUT, "ViW16 = %d", ViW16 ));
+        
+        msg (( MSG_OUT, "" ));
+      }
+      
+      
+      #ifndef CC_NOT_CPP_BUILDER
+      
+      if ( MeasExecTime ) {
+        VExecTimeUs = TIME__FMeasTimeUsEnd ( 0 /* Index */ );
+      }
+      
+      else {
+        VExecTimeUs = 0;
+      }
+      
+      #else
+      
+      // You can implement here exec tiome measurement for compiler <> C++ Builder
+      
+      VExecTimeUs = 0; // No exec time measurement implementation => Returns 0
+      
+      
+      #endif
+      
+      
+      
+      
+      return (VExecTimeUs * VRetOk );
+    }
+    
+    
+    
+
+
 
 
 /* DOC_FUNC_BEGIN */
@@ -21828,6 +25964,7 @@ SInt32 MIS1__BT_FFrDecHeadPrint ( MIS1__TBtFrDecHead* Pt, UInt8 PrintMode ) {
     msg (( MSG_OUT, "Header          = %s"  , VStrHead ));
     msg (( MSG_OUT, "Tailer          = %s"  , VStrTrail ));
     msg (( MSG_OUT, "Errors          = %d"  , Pt->Errors ));
+    msg (( MSG_OUT, "NoTrailer       = %d"  , Pt->NoTrailer ));
     msg (( MSG_OUT, "FirstDataW16Pos = %.4d", Pt->FirstDataW16Pos ));
     msg (( MSG_OUT, "FrDataSzW16     = %.4d", Pt->FrDataSzW16 ));
     msg (( MSG_OUT, "ATrigPosW16[0]  = %.4d", Pt->ATrigPosW16[0] ));
@@ -21996,6 +26133,9 @@ SInt32 MIS1__BT_FAcqDecPrintPix ( MIS1__TBtAcqDec* Pt, SInt8 MSisId, UInt32 FrId
   SInt32 ViPix;
   MIS1__TPixXY VPix;
   
+  
+  msg (( MSG_OUT, "MIS1__BT_FAcqDecPrintPix (...)" ));
+  
   // Check param
   
   err_retnull ( Pt, (ERR_OUT,"Abort Pt == NULL") );
@@ -22007,8 +26147,8 @@ SInt32 MIS1__BT_FAcqDecPrintPix ( MIS1__TBtAcqDec* Pt, SInt8 MSisId, UInt32 FrId
   }
   
   if ( FrId >= Pt->ResAFrNb[MSisId] ) {
-    FrId = Pt->ResAFrNb[MSisId] - 1;
     err_warning (( ERR_OUT, "FrId = %d it out of range, sets to last fr = %d", FrId, Pt->ResAFrNb[MSisId] - 1 ));
+    FrId = Pt->ResAFrNb[MSisId] - 1;   
   }
   
    
@@ -22244,6 +26384,7 @@ SInt32 MIS1__BT_FAcqDecCheckFrCnt6MSis ( MIS1__TBtAcqDec* Pt, UInt8 PrintLvl, UI
   }
   
   if ( VFrNbErr > 0 ) {
+    msg (( MSG_OUT, "" ));
     msg (( MSG_OUT, "FrNb difference AcqId[%.6d]MSisId[0] = %d frames ", Pt->AcqId, Pt->ResAFrNb[0] ));
     msg (( MSG_OUT, "Error : Some MSis 1 have different frames nb !" ));
     return (1);
@@ -22311,6 +26452,871 @@ SInt32 MIS1__BT_FAcqDecCheckFrCnt6MSis ( MIS1__TBtAcqDec* Pt, UInt8 PrintLvl, UI
   return (0);
 }
 
+
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : SInt32 MIS1__BT_FAcqDecCheckFrCnt6MSisV1 ( MIS1__TBtAcqDec* Pt, SInt32 ForceFrNbToCheck, UInt8 PrintLvl, UInt32* PtErrNb )
+*          :
+* \brief   : Check frame counter on 6 x  MSis = Check if it increases without missing codes 1 \n
+*
+* \param   : Pt               - Pointer to AcqDec
+*
+* \param   : ForceFrNbToCheck - Defines the fr nb to check on each MSis 1, sets to -1 to use Fr nb calculated from data stream  \n
+*                               each MSis 1 can have a different fr nb in this case, normal operating mode is -1, forcing fr nb \n
+*                               with this param is only useful to check less frames than present in data stream
+*
+* \param   : PrintLvl         - Print level 0 = no, 1 = Final result, 2 = Each error, 3 = Print frame counter of all frames
+*
+* \param   : PtErrNb          - Pointer to an errors counter, set to NULL if not used
+*
+*
+* \return  : Error code
+*          :   1 - All MSis 1 don't have same nb of frames => No frames counter checking done
+*          :   2 - Frame counter error(s)
+*          :   0 - OK
+*          : < 0 - SW error
+*          :
+* \warning : Globals   :
+* \warning : Remark    :
+* \warning : Level     :
+*          :
+* \warning : Items not filled now :
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 10/10/2021
+* \date    : Doc date  : 10/10/2021
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+
+
+SInt32 MIS1__BT_FAcqDecCheckFrCnt6MSisV1 ( MIS1__TBtAcqDec* Pt, SInt32 ForceFrNbToCheck, UInt8 PrintLvl, UInt32* PtErrNb ) {
+  
+  SInt32 VRet;
+  SInt32 VFrNb;
+  SInt32 ViFr;
+  SInt8 ViMSis;
+  UInt32 VFrCntBase;
+  UInt32 VFrCntExpected;
+  MIS1__TBtFrDecHead* VAPtFrH[MIS1__BT_MAX_REAL_MSIS_NB_ACQ];
+  SInt32 VErrCnt;
+  UInt8 VFrNbErr;
+  
+  
+  // Check param
+  
+  err_retnull ( Pt, (ERR_OUT,"Abort Pt == NULL") );
+  
+  
+  // Get ptr on frames header
+  
+  for ( ViMSis = 0; ViMSis < MIS1__BT_MAX_REAL_MSIS_NB_ACQ; ViMSis++ ) {
+    VAPtFrH[ViMSis] = &Pt->ResAAFrHead[ViMSis][0]; // Get ptr on fr 0
+  }
+  
+  
+  VFrNb  = Pt->ResAFrNb[0];
+  
+  // Check if each MSis 1 contains the same frames nb
+  
+   
+  VFrNbErr = 0;
+  
+  for ( ViMSis = 1; ViMSis < MIS1__BT_MAX_REAL_MSIS_NB_ACQ; ViMSis++ ) {
+    
+    if ( Pt->ResAFrNb[ViMSis] != VFrNb ) {
+      ++VFrNbErr;
+      msg (( MSG_OUT, "FrNb difference AcqId[%.6d]MSisId[%d] = %d frames <> MSisId[0] = %d", Pt->AcqId, ViMSis, Pt->ResAFrNb[ViMSis], VFrNb ));
+    }
+    
+  }
+  
+  if ( VFrNbErr > 0 ) {  
+    msg (( MSG_OUT, "" ));
+    msg (( MSG_OUT, "FrNb difference AcqId[%.6d]MSisId[0] = %d frames ", Pt->AcqId, Pt->ResAFrNb[0] ));
+    msg (( MSG_OUT, "Some MSis 1 have different frames nb => Stop checking !" ));
+    return (1);   
+  }
+  
+  
+  // Force fr nb for comparison
+  
+  if ( ForceFrNbToCheck > 0 ) {
+    VFrNb = ForceFrNbToCheck;
+  }
+  
+   
+  // Take MSis 0 FrCnt as reference
+  
+  
+  VFrCntBase     = VAPtFrH[0]->FrCnt;
+  VFrCntExpected = VFrCntBase;
+  
+  // Checking loop
+  
+  VErrCnt = 0;
+  
+  for ( ViFr = 0; ViFr < VFrNb; ViFr++ ) {
+    
+    for ( ViMSis = 0; ViMSis < MIS1__BT_MAX_REAL_MSIS_NB_ACQ; ViMSis++ ) {
+      
+      VAPtFrH[ViMSis] = &Pt->ResAAFrHead[ViMSis][ViFr];
+      
+      if ( VAPtFrH[ViMSis]->FrCnt != VFrCntExpected ) {
+        
+        ++VErrCnt;
+        
+        if ( PrintLvl >= 2 ) {
+          msg (( MSG_OUT, "FrCnt error : AcqId[%.6d]MSisId[%d] FrId[%.6d] : FrCnt = %d <> Expected = %d", Pt->AcqId, ViMSis, ViFr, VAPtFrH[ViMSis]->FrCnt, VFrCntExpected ));
+        }
+        
+      }
+      
+    } // End for ( ViMSis )
+    
+    
+    if ( PrintLvl == 3 ) {
+      msg (( MSG_OUT, "FrCnt : AcqId[%.6d] FrId[%.6d] : 0 = %.6d, 1 = %.6d, 2 = %.6d, 3 = %.6d, 4 = %.6d, 5 = %.6d", Pt->AcqId, ViFr, VAPtFrH[0]->FrCnt, VAPtFrH[1]->FrCnt, VAPtFrH[2]->FrCnt, VAPtFrH[3]->FrCnt, VAPtFrH[4]->FrCnt, VAPtFrH[5]->FrCnt ));
+    }
+    
+    ++VFrCntExpected;
+    
+  } // End for ( ViFr  )
+  
+  // Prints
+  
+  if ( PrintLvl >= 1 ) {
+    msg (( MSG_OUT, "" ));
+    msg (( MSG_OUT, "------------------------------------------------------" ));
+    msg (( MSG_OUT, "Test FrCnt : AcqId[%.6d] on %d frames : %d errors", Pt->AcqId, VFrNb, VErrCnt ));
+    msg (( MSG_OUT, "------------------------------------------------------" ));
+    msg (( MSG_OUT, "" ));
+  }
+  
+  
+  // Returns result
+  
+  if ( PtErrNb != NULL ) {
+    *PtErrNb = VErrCnt;
+  }
+  
+  if ( VErrCnt > 0 ) {
+    return (2);
+  }
+  
+  return (0);
+}
+
+
+
+
+
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : SInt32 MIS1__BT_FAcqDecCheckTruncFr6MSis ( MIS1__TBtAcqDec* Pt, UInt8 PrintLvl, UInt32* PtFrNoTrail, UInt32* PtFrTruncNb )
+*          :
+* \brief   : Check if frames have a trailer \n
+*
+* \param   : Pt            - Pointer to AcqDec
+*
+* \param   : PritnLvl      - Print level 0 = no, 1 = Final result, 2 = Each error, 3 = Print frame counter of all frames
+*
+* \param   : PtFrNoTrail   - Pointer to return nb of frames without trailer due to header detected before trailer, set to NULL if not used
+*
+* \param   : PtFrTruncNb   - Pointer to return nb of frames truncated due to either MSis 1 problem or fr cut at end of Acq by DAQ
+*
+* \return  : Error code
+*          :   2 - Frames nb error => After frames decoding 6 x MSis contain not the same number of frames
+*          :   1 - There are frames without trailer du to earlier header of frames truncated (with to trailer alos ;-) in the Acq, but all MSis 1 have the same fr nb
+*          :   0 - OK
+*          : < 0 - SW error
+*          :
+* \warning : Globals   :
+* \warning : Remark    :
+* \warning : Level     :
+*          :
+* \warning : Items not filled now :
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 08/06/2021
+* \date    : Rev       : 09/06/2021 - UInt32* PtFrNoTrail, UInt32* PtFrTruncNb
+* \date    : Doc date  : 08/06/2021
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+
+
+SInt32 MIS1__BT_FAcqDecCheckTruncFr6MSis ( MIS1__TBtAcqDec* Pt, UInt8 PrintLvl, UInt32* PtFrNoTrail, UInt32* PtFrTruncNb ) {
+  
+  SInt32 VRetFunc;
+  SInt32 VFrNb;
+  SInt32 ViFr;
+  SInt8  ViMSis;
+  UInt32 VFrCntBase;
+  UInt32 VFrCntExpected;
+  MIS1__TBtFrDecHead* VAPtFrH[MIS1__BT_MAX_REAL_MSIS_NB_ACQ];
+  SInt32 VFrWoTrailCnt;
+  SInt32 VFrTruncCnt;
+  SInt32 VFrWoTrailOrTruncNb;
+  UInt8  VFrNbErr;
+  
+  
+  // By default => OK
+  
+  VRetFunc = 0;
+  
+  
+  // Check param
+  
+  err_retnull ( Pt, (ERR_OUT,"Abort Pt == NULL") );
+  
+  
+  // Add a blank line before each new acq
+  
+  if ( PrintLvl >= 1 ) {
+    msg (( MSG_OUT, "" ));
+  }
+  
+  
+  // Get ptr on frames header
+  
+  for ( ViMSis = 0; ViMSis < MIS1__BT_MAX_REAL_MSIS_NB_ACQ; ViMSis++ ) {
+    VAPtFrH[ViMSis] = &Pt->ResAAFrHead[ViMSis][0]; // Get ptr on fr 0
+  }
+  
+  
+  // -----------------------------------------------------
+  // HOW TO DETECT ACQ WITH RISK OF PROBLEM - BEGIN
+  // -----------------------------------------------------
+  
+  // Check if each MSis 1 contains the same frames nb
+  // Takes MSis no 0 as reference for frames nb
+  
+  VFrNb  = Pt->ResAFrNb[0];
+  
+  VFrNbErr = 0;
+  
+  for ( ViMSis = 1; ViMSis < MIS1__BT_MAX_REAL_MSIS_NB_ACQ; ViMSis++ ) {
+    
+    if ( Pt->ResAFrNb[ViMSis] != VFrNb ) {
+      ++VFrNbErr;
+      
+      if ( PrintLvl >= 2 ) {
+        msg (( MSG_OUT, "FrNb difference AcqId[%.6d]MSisId[%d] = %d frames ", Pt->AcqId, ViMSis, Pt->ResAFrNb[ViMSis] ));
+      }
+            
+    }
+    
+  }
+  
+  if ( VFrNbErr > 0 ) {
+    
+    if ( PrintLvl >= 2 ) {
+      msg (( MSG_OUT, "Warning : FrNb difference AcqId[%.6d]MSisId[0] = %d frames ", Pt->AcqId, Pt->ResAFrNb[0] ));
+      msg (( MSG_OUT, "Warning : Some MSis 1 have different frames nb !" ));
+      msg (( MSG_OUT, "" ));
+    }
+                  
+    
+    VRetFunc = 2; // returns 2 because it is Fr nb error
+  }
+  
+  // -----------------------------------------------------
+  // HOW TO DETECT ACQ WITH RISK OF PROBLEM - END
+  // -----------------------------------------------------
+  
+  
+  
+  // Checking loop
+  
+  VFrWoTrailCnt = 0;
+  VFrTruncCnt   = 0;
+  
+  for ( ViMSis = 0; ViMSis < MIS1__BT_MAX_REAL_MSIS_NB_ACQ; ViMSis++ ) {
+    
+    // Scan frames
+    
+    VFrNb = Pt->ResAFrNb[ViMSis];
+    
+    for ( ViFr = 0; ViFr < VFrNb; ViFr++ ) {
+      
+     
+      if ( VAPtFrH[ViMSis]->NoTrailer == 1 ) {
+        
+        VFrWoTrailCnt++;
+        
+        if ( PrintLvl >= 2 ) {
+          msg (( MSG_OUT, "No trailer AcqId = %.6d, MSisId = %d, FrId = %.4d", Pt->AcqId, ViMSis, ViFr ));
+        }
+        
+      } // End if ( VAPtFrH[ViMSis]->NoTrailer == 1 )
+      
+      
+      if ( VAPtFrH[ViMSis]->Truncated == 1 ) {
+        
+        VFrTruncCnt++;
+        
+        if ( PrintLvl >= 2 ) {
+          msg (( MSG_OUT, "Fr truncated AcqId = %.6d, MSisId = %d, FrId = %.4d", Pt->AcqId, ViMSis, ViFr ));
+        }
+        
+        
+      } // End if ( VAPtFrH[ViMSis]->FrTruncated == 1 )
+      
+                     
+      
+      VAPtFrH[ViMSis]++;      
+      
+    } // End for ( ViFr )
+    
+    
+  } // End for ( ViMSis )
+  
+  
+  VFrWoTrailOrTruncNb = VFrWoTrailCnt + VFrTruncCnt;
+  
+  
+  // Prints
+  
+  if ( (PrintLvl >= 1) && (VFrWoTrailOrTruncNb > 0) ) {
+    msg (( MSG_OUT, "" ));
+    msg (( MSG_OUT, "-------------------------------------------------------------------------------------" ));
+    msg (( MSG_OUT, "Test frames truncated, no trailer : AcqId[%.6d] on %d frames : %d fr wo trailer, %d fr truncated", Pt->AcqId, VFrNb, VFrWoTrailCnt, VFrTruncCnt ));
+    msg (( MSG_OUT, "-------------------------------------------------------------------------------------" ));
+    msg (( MSG_OUT, "" ));
+  }
+  
+  
+  // Returns result
+  
+  if ( PtFrNoTrail != NULL ) {
+    *PtFrNoTrail = VFrWoTrailCnt;
+  }
+  
+  if ( PtFrTruncNb != NULL ) {
+    *PtFrTruncNb = VFrTruncCnt;
+  }
+  
+  
+  if ( VFrWoTrailOrTruncNb > 0 ) {
+    VRetFunc = 1;
+  }
+  
+  return ( VRetFunc );
+}
+
+
+
+
+
+
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : SInt32 MIS1__BT_FAcqDecCheckTruncFr6MSisV1 ( MIS1__TBtAcqDec* Pt, SInt32 ForceFrNbToCheck, UInt8 PrintLvl, UInt32* PtFrNoTrail, UInt32* PtFrTruncNb, UInt32* PtFrOvfFlagsNb )
+*          :
+* \brief   : Check if frames have a trailer \n
+*
+* \param   : Pt               - Pointer to AcqDec
+*
+* \param   : ForceFrNbToCheck - Defines the fr nb to check on each MSis 1, sets to -1 to use Fr nb calculated from data stream  \n
+*                               each MSis 1 can have a different fr nb in this case, normal operating mode is -1, forcing fr nb \n
+*                               with this param is only useful to check less frames than present in data stream
+*
+* \param   : PritnLvl         - Print level 0 = no, 1 = Final result, 2 = Each error, 3 = Print frame counter of all frames
+*
+* \param   : PtFrNoTrail      - Pointer to return nb of frames without trailer due to header detected before trailer, set to NULL if not used
+*
+* \param   : PtFrTruncNb      - Pointer to return nb of frames truncated due to either MSis 1 problem or fr cut at end of Acq by DAQ
+*
+* \param   : PtFrOvfFlagsNb   - Pointer to return nb of frames with one of more OVF flags set => It mans Mimosis 1 OVF
+*
+* \return  : Error code
+*          :   2 - Frames nb error => After frames decoding 6 x MSis contain not the same number of frames
+*          :   1 - There are frames without trailer du to earlier header of frames truncated (with to trailer alos ;-) in the Acq, but all MSis 1 have the same fr nb
+*          :   0 - OK
+*          : < 0 - SW error
+*          :
+* \warning : Globals   :
+* \warning : Remark    :
+* \warning : Level     :
+*          :
+* \warning : Items not filled now :
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 09/10/2021
+* \date    : Doc date  : 09/10/2021
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+
+
+SInt32 MIS1__BT_FAcqDecCheckTruncFr6MSisV1 ( MIS1__TBtAcqDec* Pt, SInt32 ForceFrNbToCheck, UInt8 PrintLvl, UInt32* PtFrNoTrail, UInt32* PtFrTruncNb, UInt32* PtFrOvfFlagsNb, SInt32* PtMaxFrSz, SInt8* PtMaxFrMSis ) {
+  
+  SInt32 VRetFunc;
+  SInt32 VFrNb;
+  SInt32 ViFr;
+  SInt8  ViMSis;
+  UInt32 VFrCntBase;
+  UInt32 VFrCntExpected;
+  MIS1__TBtFrDecHead* VAPtFrH[MIS1__BT_MAX_REAL_MSIS_NB_ACQ];
+  SInt32 VFrWoTrailCnt;
+  SInt32 VFrTruncCnt;
+  SInt32 VFrWoTrailOrTruncNb;
+  SInt32 VFrOvfFlagsCnt;
+  UInt8  VFrNbErr;
+  
+  SInt32 VMaxFrSz;
+  SInt8  VMaxFrMSis;
+  
+  
+  // By default => OK
+  
+  VRetFunc = 0;
+  
+  
+  // Check param
+  
+  err_retnull ( Pt, (ERR_OUT,"Abort Pt == NULL") );
+  
+  
+  // Add a blank line before each new acq
+  
+  if ( PrintLvl >= 1 ) {
+    msg (( MSG_OUT, "" ));
+  }
+  
+  
+  // Get ptr on frames header
+  
+  for ( ViMSis = 0; ViMSis < MIS1__BT_MAX_REAL_MSIS_NB_ACQ; ViMSis++ ) {
+    VAPtFrH[ViMSis] = &Pt->ResAAFrHead[ViMSis][0]; // Get ptr on fr 0
+  }
+  
+  
+  // -----------------------------------------------------
+  // HOW TO DETECT ACQ WITH RISK OF PROBLEM - BEGIN
+  // -----------------------------------------------------
+  
+  // Check if each MSis 1 contains the same frames nb
+  // Takes MSis no 0 as reference for frames nb
+  
+  VFrNb  = Pt->ResAFrNb[0];
+  
+  VFrNbErr = 0;
+  
+  for ( ViMSis = 1; ViMSis < MIS1__BT_MAX_REAL_MSIS_NB_ACQ; ViMSis++ ) {
+    
+    if ( Pt->ResAFrNb[ViMSis] != VFrNb ) {
+      ++VFrNbErr;
+      
+      if ( PrintLvl >= 2 ) {
+        msg (( MSG_OUT, "FrNb difference AcqId[%.6d]MSisId[%d] = %d frames ", Pt->AcqId, ViMSis, Pt->ResAFrNb[ViMSis] ));
+      }
+      
+    }
+    
+  }
+  
+  if ( VFrNbErr > 0 ) {
+    
+    if ( PrintLvl >= 2 ) {
+      msg (( MSG_OUT, "Warning : FrNb difference AcqId[%.6d]MSisId[0] = %d frames ", Pt->AcqId, Pt->ResAFrNb[0] ));
+      msg (( MSG_OUT, "Warning : Some MSis 1 have different frames nb !" ));
+      msg (( MSG_OUT, "" ));
+    }
+    
+    
+    VRetFunc = 2; // returns 2 because it is Fr nb error
+  }
+  
+  // -----------------------------------------------------
+  // HOW TO DETECT ACQ WITH RISK OF PROBLEM - END
+  // -----------------------------------------------------
+  
+  
+  
+  // Checking loop
+  
+  VFrWoTrailCnt  = 0;
+  VFrTruncCnt    = 0;
+  VFrOvfFlagsCnt = 0;
+  
+  
+  VMaxFrSz   = 0;
+  VMaxFrMSis = -1;
+  
+  
+  for ( ViMSis = 0; ViMSis < MIS1__BT_MAX_REAL_MSIS_NB_ACQ; ViMSis++ ) {
+    
+    // Scan frames
+    
+    // Forces fr nb to check => same for each MSis 1
+    
+    if ( ForceFrNbToCheck > 0 ) {
+      VFrNb = ForceFrNbToCheck;
+    }
+    
+    // Gets fr nb to check from data stream => each MSsi 1 can have a different fr nb 
+    
+    else {
+      VFrNb = Pt->ResAFrNb[ViMSis];
+    }
+        
+    VFrNb = 999;
+    
+    for ( ViFr = 0; ViFr < VFrNb; ViFr++ ) {
+      
+      if ( VAPtFrH[ViMSis]->NoTrailer == 1 ) {
+        
+        VFrWoTrailCnt++;
+        
+        if ( PrintLvl >= 2 ) {
+          msg (( MSG_OUT, "No trailer AcqId = %.6d, MSisId = %d, FrId = %.4d", Pt->AcqId, ViMSis, ViFr ));
+        }
+        
+        // 10/10/2021 debug : Print frames without trailer if FrNo in normal Acq range 0..FrNbInAcq - 1
+        
+        if ( ViFr < Pt->ParFrNbInSrcAcq ) {
+          msg (( MSG_OUT, "======================> No trailer AcqId = %.6d AND FrId < %.4d, MSisId = %d, FrId = %.4d", Pt->AcqId, Pt->ParFrNbInSrcAcq, ViMSis, ViFr ));
+        }
+        
+        
+      } // End if ( VAPtFrH[ViMSis]->NoTrailer == 1 )
+      
+      
+      if ( VAPtFrH[ViMSis]->Truncated == 1 ) {
+        
+        VFrTruncCnt++;
+        
+        if ( PrintLvl >= 2 ) {
+          msg (( MSG_OUT, "Fr truncated AcqId = %.6d, MSisId = %d, FrId = %.4d", Pt->AcqId, ViMSis, ViFr ));
+        }
+
+        // 10/10/2021 debug : Print frames truncated if FrNo in normal Acq range 0..FrNbInAcq - 1
+        
+        if ( ViFr < Pt->ParFrNbInSrcAcq ) {
+          msg (( MSG_OUT, "======================> Fr truncated AcqId = %.6d AND FrId < %.4d, MSisId = %d, FrId = %.4d - FrNb in Acq  = %d", Pt->AcqId, Pt->ParFrNbInSrcAcq, ViMSis, ViFr, Pt->ParFrNbInSrcAcq ));
+        }
+    
+        // 10/10/2021 debug : Print frames truncated if "Acq is not at risk" = all MSis 1 have same nb of frames
+        
+        if ( VFrNbErr == 0 ) {
+          msg (( MSG_OUT, "======================> Fr truncated AcqId = %.6d AND ALL MSis same fr nb, MSisId = %d, FrId = %.4d", Pt->AcqId, ViMSis, ViFr ));
+        }
+        
+        
+      } // End if ( VAPtFrH[ViMSis]->FrTruncated == 1 )
+      
+
+
+      // 09/10/2021
+      // Emul OVF to check code
+      //
+      // if ( (Pt->AcqId % 10 == 0) && (ViMSis == 0) && (ViFr == 0) ) {
+      //  VAPtFrH[ViMSis]->MSisFrTrail.F.Flags = 1;
+      // }
+      
+
+      // 09/10/2021
+      
+      if ( VAPtFrH[ViMSis]->MSisFrTrail.F.Flags != 0 ) {
+        
+        VFrOvfFlagsCnt++;
+        
+        if ( PrintLvl >= 2 ) {
+          msg (( MSG_OUT, "Fr with OVF flag(s) set AcqId = %.6d, MSisId = %d, FrId = %.4d, Flags = %X [H]", Pt->AcqId, ViMSis, ViFr, VAPtFrH[ViMSis]->MSisFrTrail.F.Flags ));
+        }
+        
+      } // End if VAPtFrH[ViMSis]->MSisFrTrail.F.Flags != 0 )
+      
+
+      // Chck fr size
+      
+      
+      // msg (( MSG_OUT, "Fr size = %.4d : AcqId = %.6d, MSisId = %d, FrId = %.4d", VAPtFrH[ViMSis]->FrDataSzW16, Pt->AcqId, ViMSis, ViFr )); // 10/10/2021
+      
+      if ( VAPtFrH[ViMSis]->FrDataSzW16 > VMaxFrSz) {
+        VMaxFrSz   = VAPtFrH[ViMSis]->FrDataSzW16;
+        VMaxFrMSis = ViMSis;
+      }
+
+
+      VAPtFrH[ViMSis]++;
+      
+    } // End for ( ViFr )
+    
+    
+  } // End for ( ViMSis )
+  
+  
+  VFrWoTrailOrTruncNb = VFrWoTrailCnt + VFrTruncCnt;
+  
+  
+  // Prints
+  
+  if ( (PrintLvl >= 1) && (VFrWoTrailOrTruncNb > 0) ) {
+    msg (( MSG_OUT, "" ));
+    msg (( MSG_OUT, "-------------------------------------------------------------------------------------" ));
+    msg (( MSG_OUT, "Test frames truncated, no trailer : AcqId[%.6d] on %d frames : %d fr wo trailer, %d fr truncated", Pt->AcqId, VFrNb, VFrWoTrailCnt, VFrTruncCnt ));
+    msg (( MSG_OUT, "-------------------------------------------------------------------------------------" ));
+    msg (( MSG_OUT, "" ));
+  }
+  
+  if ( PrintLvl >= 2 ) {
+    msg (( MSG_OUT, "" ));
+    msg (( MSG_OUT, "-------------------------------------------------------------------------------------" ));
+    msg (( MSG_OUT, "Test frames truncated, max fr sz : AcqId[%.6d] on %d frames ", Pt->AcqId, VFrNb ));
+    msg (( MSG_OUT, "Max frame size = %d W16 on MSis No  %d", VMaxFrSz, VMaxFrMSis ));
+    msg (( MSG_OUT, "-------------------------------------------------------------------------------------" ));
+    msg (( MSG_OUT, "" ));
+  }
+
+
+  // Returns result
+  
+  if ( PtFrNoTrail != NULL ) {
+    *PtFrNoTrail = VFrWoTrailCnt;
+  }
+  
+  if ( PtFrTruncNb != NULL ) {
+    *PtFrTruncNb = VFrTruncCnt;
+  }
+  
+  
+  if ( PtFrOvfFlagsNb != NULL ) {
+    *PtFrOvfFlagsNb = VFrOvfFlagsCnt;
+  }
+    
+  
+  if ( VFrWoTrailOrTruncNb > 0 ) {
+    VRetFunc = 1;
+  }
+  
+  
+  if ( PtMaxFrSz != NULL ) {
+    *PtMaxFrSz = VMaxFrSz;
+  }
+  
+  
+  if ( PtMaxFrMSis!= NULL  ) {
+    *PtMaxFrMSis = VMaxFrMSis;
+  }
+  
+  
+  return ( VRetFunc );
+}
+
+
+
+
+
+/* DOC_FUNC_BEGIN */
+/**
+===================================================================================
+* \fn      : SInt32 MIS1__BT_FAcqDecCheckTruncFr6MSis_v090621 ( MIS1__TBtAcqDec* Pt, UInt8 PrintLvl, UInt32* PtFrNoTrail, UInt32* PtFrTruncNb )
+*          :
+* \brief   : Check if frames have a trailer \n
+*
+* \param   : Pt            - Pointer to AcqDec
+*
+* \param   : PritnLvl      - Print level 0 = no, 1 = Final result, 2 = Each error, 3 = Print frame counter of all frames
+*
+* \param   : PtFrNoTrail   - Pointer to return nb of frames without trailer due to header detected before trailer, set to NULL if not used
+*
+* \param   : PtFrTruncNb   - Pointer to return nb of frames truncated due to either MSis 1 problem or fr cut at end of Acq by DAQ
+*
+* \return  : Error code
+*          :   2 - Frames nb error => After frames decoding 6 x MSis contain not the same number of frames
+*          :   1 - There are frames without trailer du to earlier header of frames truncated (with to trailer alos ;-) in the Acq, but all MSis 1 have the same fr nb
+*          :   0 - OK
+*          : < 0 - SW error
+*          :
+* \warning : Globals   :
+* \warning : Remark    :
+* \warning : Level     :
+*          :
+* \warning : Items not filled now :
+*  todo    :
+*          :
+*  bug     :
+*          :
+* \date    : Date      : 08/06/2021
+* \date    : Rev       : 09/06/2021 - UInt32* PtFrNoTrail, UInt32* PtFrTruncNb
+* \date    : Doc date  : 08/06/2021
+* \author  : Name      : Gilles CLAUS
+* \author  : E-mail    : gilles.claus@iphc.cnrs.fr
+* \author  : Labo      : IPHC
+*
+===================================================================================
+*/
+/* DOC_FUNC_END */
+
+
+SInt32 MIS1__BT_FAcqDecCheckTruncFr6MSis_v090621 ( MIS1__TBtAcqDec* Pt, UInt8 PrintLvl, UInt32* PtFrNoTrail, UInt32* PtFrTruncNb ) {
+  
+  SInt32 VRet;
+  SInt32 VFrNb;
+  SInt32 ViFr;
+  SInt8  ViMSis;
+  UInt32 VFrCntBase;
+  UInt32 VFrCntExpected;
+  MIS1__TBtFrDecHead* VAPtFrH[MIS1__BT_MAX_REAL_MSIS_NB_ACQ];
+  SInt32 VFrWoTrailCnt;
+  SInt32 VFrTruncCnt;
+  SInt32 VFrWoTrailOrTruncNb;
+  UInt8  VFrNbErr;
+  
+  
+  // Check param
+  
+  err_retnull ( Pt, (ERR_OUT,"Abort Pt == NULL") );
+  
+  
+  // Get ptr on frames header
+  
+  for ( ViMSis = 0; ViMSis < MIS1__BT_MAX_REAL_MSIS_NB_ACQ; ViMSis++ ) {
+    VAPtFrH[ViMSis] = &Pt->ResAAFrHead[ViMSis][0]; // Get ptr on fr 0
+  }
+  
+    
+  // -----------------------------------------------------  
+  // HOW TO DETECT ACQ WITH RISK OF PROBLEM - BEGIN 
+  // -----------------------------------------------------
+  
+  // Check if each MSis 1 contains the same frames nb
+  // Takes MSis no 0 as reference for frames nb
+  
+  VFrNb  = Pt->ResAFrNb[0];
+    
+  VFrNbErr = 0;
+  
+  for ( ViMSis = 1; ViMSis < MIS1__BT_MAX_REAL_MSIS_NB_ACQ; ViMSis++ ) {
+    
+    if ( Pt->ResAFrNb[ViMSis] != VFrNb ) {
+      ++VFrNbErr;
+      msg (( MSG_OUT, "FrNb difference AcqId[%.6d]MSisId[%d] = %d frames ", Pt->AcqId, ViMSis, Pt->ResAFrNb[ViMSis] ));
+    }
+    
+  }
+  
+  if ( VFrNbErr > 0 ) {
+    msg (( MSG_OUT, "Error : Frames trailer check aborted due to frames nb <> between MSis 1 !" ));
+    msg (( MSG_OUT, "Error : FrNb difference AcqId[%.6d]MSisId[0] = %d frames ", Pt->AcqId, Pt->ResAFrNb[0] ));
+    msg (( MSG_OUT, "Error : Some MSis 1 have different frames nb !" ));
+    msg (( MSG_OUT, "" ));
+    
+    // Returns result
+    
+    if ( PtFrNoTrail != NULL ) {
+      *PtFrNoTrail = 0; // Returns 0 because fr nb <>, and test on trailer not done
+    }
+    
+    if ( PtFrTruncNb != NULL ) {
+      *PtFrTruncNb = 0; // Returns 0 because fr nb <>, and test on fr truncated not done
+    }
+    
+  
+    return (2); // returns 2 because it is Fr nb error
+  }
+  
+  // -----------------------------------------------------
+  // HOW TO DETECT ACQ WITH RISK OF PROBLEM - END
+  // -----------------------------------------------------
+  
+
+
+  // Checking loop
+  
+  VFrWoTrailCnt = 0;
+  VFrTruncCnt   = 0;
+  
+  for ( ViMSis = 0; ViMSis < MIS1__BT_MAX_REAL_MSIS_NB_ACQ; ViMSis++ ) {
+         
+    // Scan frames
+    
+    for ( ViFr = 0; ViFr < VFrNb; ViFr++ ) {
+      
+      if ( VAPtFrH[ViMSis]->NoTrailer == 1 ) {
+        
+        VFrWoTrailCnt++;
+        
+        if ( PrintLvl >= 2 ) {
+          msg (( MSG_OUT, "$$ No trailer AcqId = %.6d, MSisId = %d, FrId = %.4d", Pt->AcqId, ViMSis, ViFr ));
+        }
+        
+      } // End if ( VAPtFrH[ViMSis]->NoTrailer == 1 )
+      
+      
+      if ( VAPtFrH[ViMSis]->Truncated == 1 ) {
+        
+        VFrTruncCnt++;
+        
+        if ( PrintLvl >= 2 ) {
+          msg (( MSG_OUT, "$ Fr truncated AcqId = %.6d, MSisId = %d, FrId = %.4d", Pt->AcqId, ViMSis, ViFr ));
+        }
+        
+        
+      } // End if ( VAPtFrH[ViMSis]->FrTruncated == 1 )
+      
+      
+    } // End for ( ViFr )
+    
+    
+  } // End for ( ViMSis )
+  
+  
+  VFrWoTrailOrTruncNb = VFrWoTrailCnt + VFrTruncCnt;
+  
+     
+  // Prints
+  
+  if ( (PrintLvl >= 1) && (VFrWoTrailOrTruncNb > 0) ) {
+    msg (( MSG_OUT, "" ));
+    msg (( MSG_OUT, "-------------------------------------------------------------------------------------" ));
+    msg (( MSG_OUT, "Test frames truncated, no trailer : AcqId[%.6d] on %d frames : %d fr wo trailer, %d fr truncated", Pt->AcqId, VFrNb, VFrWoTrailCnt, VFrTruncCnt ));
+    msg (( MSG_OUT, "-------------------------------------------------------------------------------------" ));
+    msg (( MSG_OUT, "" ));
+  }
+  
+  
+  // Returns result
+  
+  if ( PtFrNoTrail != NULL ) {
+    *PtFrNoTrail = VFrWoTrailCnt;
+  }
+  
+  if ( PtFrTruncNb != NULL ) {
+    *PtFrTruncNb = VFrTruncCnt;
+  }
+  
+  
+  if ( VFrWoTrailOrTruncNb > 0 ) {
+    return (1);
+  }
+  
+  return (0);
+}
 
 
 

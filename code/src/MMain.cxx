@@ -111,6 +111,18 @@ Int_t main(Int_t argc, Char_t **argv)
   TString sessinit_DSFProduction_cmd = "-dsfp";
   Int_t sessinit_DSFProduction_arg = 0;
   Int_t sessinit_DSFProduction_def = 0;
+  // exec FakeRate : added by Ziad EL BITAR, March 21, 2022
+  TString sessinit_FakeRate_cmd = "-fakerate";
+  Int_t sessinit_FakeRate_arg_1 = 0; // nEvents
+  Int_t sessinit_FakeRate_arg_2 = 0; // PlaneNumber
+  Int_t sessinit_FakeRate_arg_3 = 0; // MaxPixPerEvent
+  Double_t sessinit_FakeRate_arg_4 = 0; // MaxRateForTruncation
+  Int_t sessinit_FakeRate_arg_5 = 0; // lowestCol
+  Int_t sessinit_FakeRate_arg_6 = 0; // highestCol
+  Int_t sessinit_FakeRate_arg_7 = 0; // lowestRow
+  Int_t sessinit_FakeRate_arg_8 = 0; // highestRow
+  TString sessinit_Fake_def = "arg_1 : nEvents, arg_2 : PlaneNumber, arg_3 : maxPixPerEvent, arg_4 : maxRateForTruncation, arg_5 : lowestCol, arg_6 : highestCol, arg_7 : lowestRow, arg_8 : hightRow";
+    
   // output files prefix :
   TString sessinit_outFilesPref_cmd = "-prefix";
   TString sessinit_outFilesPref_arg = "";
@@ -296,6 +308,28 @@ Int_t main(Int_t argc, Char_t **argv)
         i++;
       }
 
+    // FakeRate; added by Ziad EL BITAR, March 21, 2022
+    else if (!arg.CompareTo(sessinit_FakeRate_cmd) && ((i+1)<argc)) // if this arg is followed by another
+         {
+           sessinit_FakeRate_arg_1 = atoi(argv[i+1]);
+           sessinit_FakeRate_arg_2 = atoi(argv[i+2]);
+           sessinit_FakeRate_arg_3 = atoi(argv[i+3]);
+           sessinit_FakeRate_arg_4 = atof(argv[i+4]);
+           sessinit_FakeRate_arg_5 = atoi(argv[i+5]);
+           sessinit_FakeRate_arg_6 = atoi(argv[i+6]);
+           sessinit_FakeRate_arg_7 = atoi(argv[i+7]);
+           sessinit_FakeRate_arg_8 = atoi(argv[i+8]);
+             if(verbose) {
+                 cout << "  * InitSession: FakeRate is activated with "<< sessinit_FakeRate_arg_1 << " events and for plane number : " << sessinit_FakeRate_arg_2 << endl;
+                 cout <<"maxPixPerEvent : " << sessinit_FakeRate_arg_3 << endl;
+                 cout <<"maxRateForTruncation : " << sessinit_FakeRate_arg_4 << endl;
+                 cout <<"lowestCol : " << sessinit_FakeRate_arg_5 << endl;
+                 cout <<"highestCol : " << sessinit_FakeRate_arg_6 << endl;
+                 cout <<"lowestRow : " << sessinit_FakeRate_arg_7 << endl;
+                 cout <<"highestRow : " << sessinit_FakeRate_arg_8 << endl;
+             }
+           i+=8;
+         }
     // output files suffix
     else if (!arg.CompareTo(sessinit_outFilesSuff_cmd) && ((i+1)<argc)) // if this arg is followed by another
     {
@@ -612,6 +646,20 @@ Int_t main(Int_t argc, Char_t **argv)
         cout << "tafcommand for DSF : " << tafcommand << endl;
         gROOT->ProcessLineSync(tafcommand);
     }
+      
+    if (sessinit_FakeRate_arg_1 != 0)
+    {
+          cout << " ****FakeRate will be launched with : " << sessinit_FakeRate_arg_1 << " events and for plane " << sessinit_FakeRate_arg_2 << endl;
+              cout <<   "maxPixPerEvent : " << sessinit_FakeRate_arg_3 << endl;
+              cout <<   "maxRateForTruncation : " << sessinit_FakeRate_arg_4 << endl;
+              cout <<   "lowestCol : " << sessinit_FakeRate_arg_5 << endl;
+              cout <<   "highestCol : " << sessinit_FakeRate_arg_6 << endl;
+              cout <<   "lowestRow : " << sessinit_FakeRate_arg_7 << endl;
+              cout <<   "highestRow : " << sessinit_FakeRate_arg_8 << endl;
+          sprintf(tafcommand, "gTAF->GetRaw()->FakeRateBinaryFromRawData(%d,%d,%d,%f,%d,%d,%d,%d)", sessinit_FakeRate_arg_1, sessinit_FakeRate_arg_2, sessinit_FakeRate_arg_3, sessinit_FakeRate_arg_4, sessinit_FakeRate_arg_5, sessinit_FakeRate_arg_6, sessinit_FakeRate_arg_7,sessinit_FakeRate_arg_8);
+          cout << "tafcommand for FakeRate : " << tafcommand << endl;
+          gROOT->ProcessLineSync(tafcommand);
+     }
     //------------------------------
     // launch GUIs
     //------------------------------

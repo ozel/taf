@@ -1760,13 +1760,16 @@ void MimosaAnalysis::MimosaPro(Int_t   MaxEvt,
   if (strstr(SaveAlign,"no") || strstr(SaveAlign,"NO")){
     csvfile.open ("Main_results.csv",ios::app);
     TDatime aTime;
-    csvfile<<aTime.AsString()<<",";
-    csvfile << RunNumber <<","<<ThePlaneNumber<<","<<geomUmin<<","<<geomUmax<<","<<geomVmin<<","<<geomVmax<<","<<NofClMatchTrack<<","<<NtrkInMimo<<","
+    
+     csvfile<<aTime.AsString()<<",";
+     csvfile << RunNumber <<","<<ThePlaneNumber<<","<<geomUmin<<","<<geomUmax<<","<<geomVmin<<","<<geomVmax<<","<<NofClMatchTrack<<","<<NtrkInMimo<<","
 	    << MimosaEfficiency*100.0<<","<<MimosaEfficiency_ERR*100.0<<","<<hnpix_c->GetMean()<<","<<hnpix_c->GetRMS()/sqrt(hnpix_c->GetEntries())<<",";
     csvfile<<setprecision(3)<<"," << hnpix_c->GetBinContent(2)/hnpix_c->Integral()<< "," << hnpix_c->GetBinContent(3)/hnpix_c->Integral()<< "," << hnpix_c->GetBinContent(4)/hnpix_c->Integral()<< "," << hnpix_c->GetBinContent(5)/hnpix_c->Integral()<< "," << hnpix_c->GetBinContent(6)/hnpix_c->Integral()<< "," << hnpix_c->GetBinContent(7)/hnpix_c->Integral()<<","<<hnpix_c->GetBinContent(8)/hnpix_c->Integral()<<","<<hnpix_c->GetBinContent(9)/hnpix_c->Integral()<<",";
       //MimosaResolution(); //MimosaResolution is run here in order to add information to the CSV file.
     csvfile<<RootFile<<endl;
     csvfile.close();
+
+       
   }
   fClearDone=kFALSE;
   PreparePost();

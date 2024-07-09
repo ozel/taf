@@ -9,7 +9,8 @@
 /////////////////////////////////////////////////////////////
 //
 // created JB, 2021/04/21
-// Last Modified: Ziad, 2021/06/15
+// Last Modified: Ziad, 2024/06/27
+/* Added MIMOSIS21 Version setting */
 // This class enables the decoding of MIMOSIS1 sensor data
 // * Two main methods are used for decoding:
 //  - DecodeNextEvent: enables the scanning of the acquisitions and get the pointer of the current acquisition.
@@ -331,7 +332,18 @@ int BoardReaderMIMOSIS::test() {
      printf ( "Messages log file => %s \n", APP_VGPtRunRead->FMsgLogSetFilename () );
      printf ( "============================================================= \n" );
      printf ( "\n" );
-     
+    
+    // ----------------------------------------------------------------
+    // Configure MSis version
+    //
+    // => This is better to do it after error and log file configuration
+    // => If this function is not called, by default MSis 1 is configured
+    //
+    // ----------------------------------------------------------------
+   
+                                  // 21/06/2024
+    MIS1__FSetMSisVersion ( 21 ); // Possible values are 1, 2, 21
+
    
      // ----------------------------------------------------------------
      // Allocate record to convert one Acq
@@ -1009,7 +1021,17 @@ BoardReaderMIMOSIS::BoardReaderMIMOSIS(int boardNumber, char* dataPath, int runN
   
   // Initialization of the number of fired pixels per frame
   //for (int i = 0; i < 1000; i ++) NbFiredPixPerFrame[i] = 0;
-
+    
+  // ----------------------------------------------------------------
+  // Configure MSis version
+  //
+  // => This is better to do it after error and log file configuration
+  // => If this function is not called, by default MSis 1 is configured
+  //
+  // ----------------------------------------------------------------
+   
+                                  // 21/06/2024
+    MIS1__FSetMSisVersion ( 21 ); // Possible values are 1, 2, 21
   // ----------------------------------------------------------------
   // Reading Class creation
   // ----------------------------------------------------------------
@@ -1218,9 +1240,9 @@ bool BoardReaderMIMOSIS::HasData( ) {
  }
 
  if( DecodeNextEvent() ) {
-
+              
    if(fDebugLevel>1) PrintEventHeader();
-
+    
    fCurrentEvent = new BoardReaderEvent( fCurrentEventNumber, fBoardNumber, 0, &fListOfPixels); // run number set to 0 for now
    fCurrentEvent->SetListOfTriggers( &fListOfTriggers);
    fCurrentEvent->SetListOfFrames( &fListOfFrames);
@@ -1293,18 +1315,18 @@ bool BoardReaderMIMOSIS::DecodeNextEvent() {
             if(fDebugLevel>1) cout << "BoardReaderMIMOSIS  Getting the pointer for the first acquisition " << endl;
             
             VPtAcq = APP_VGPtRunRead->FAcqFirst ( 0 /* ChkAcqHead */, 0 /* PrintAcqHead */ );
-                       
+            
             if (! isAcqSafe()){
                 printf(" The Acquisition %d is risky due to different number of frames in sensors \n", fCurrentAcqNumber);
                 fTruncatedAcqCounter ++;
-                }
+            }
             else fisAcqSafe = true;
             
             fCurrentAcqNumber ++;
             fisfirstAcq = false;
             fCurrentFrameNumber = 0; // ZE 2021/06/04
             
-            }
+        }
         
         else {
              //Check if the current Acquisition was truncated before accessing and processing next one.
@@ -1330,9 +1352,13 @@ bool BoardReaderMIMOSIS::DecodeNextEvent() {
         case 1 :
             
             if (fCurrentTriggerNumber ==  fnbTrg) {
-           //cout << "Number of Triggers for Acquisition " << fCurrentAcqNumber << " is " << fnbTrg << endl;
+          
                 if (fisfirstAcq == true) {
-                  
+                    
+                  // Added by Z.E for COSY BEAM TEST to monitor the numbers of triggers
+                   // cout << "COSY " << fCurrentAcqNumber <<  " " << fnbTrg << endl;
+                   //cout << "Acquistion number : " << fCurrentAcqNumber << " --> Number of triggers :  " << fnbTrg << endl;
+                   
                     if(fDebugLevel>1)
                         cout << "BoardReaderMIMOSIS  Getting the pointer for the first acquisition " << endl;
                     
@@ -1350,15 +1376,17 @@ bool BoardReaderMIMOSIS::DecodeNextEvent() {
                     fisfirstAcq = false;
                     }
               else {
+                    //cout << "Acquistion number : " << fCurrentAcqNumber << " --> Number of triggers :  " << fnbTrg << endl;
+                    //cout << "COSY " << fCurrentAcqNumber <<  " " << fnbTrg << endl;
                     //Check if the current Acquisition was truncated before accessing and processing next one.
             
                     if(fDebugLevel>1)
                         printf (" BoardReaderMIMOSIS Changing to NextAcq % d since fCurrentTriggerNumber = % d \n", fCurrentAcqNumber + 1, fCurrentTriggerNumber);
                     //printf(" Getting Pointer for Next Acq : %d \n", fCurrentAcqNumber);
                   
-                    VPtAcq = APP_VGPtRunRead->FAcqNext ( 0 /* ChkAcqHead */, 0 /* PrintAcqHead */, &VResReachEndOfRun );
-                
-                     if (! isAcqSafe()){
+                  VPtAcq = APP_VGPtRunRead->FAcqNext ( 0 /* ChkAcqHead */, 0 /* PrintAcqHead */, &VResReachEndOfRun );
+                  
+                  if (! isAcqSafe()){
                        printf(" The Acquisition %d is risky due to different number of frames in sensors \n", fCurrentAcqNumber);
                        fTruncatedAcqCounter ++;
                      }
@@ -1430,7 +1458,7 @@ bool BoardReaderMIMOSIS::DecodeNextEvent() {
         VPtAcqHead = &(APP_VGPtAcqW16A->AcqRawHead);
         VGPtTrig = &(VPtAcqHead->Trigs);
         fnbTrg = VPtAcqHead->Trigs.TrigNb;
-        
+       // cout << "Acquistion number : " << fCurrentAcqNumber << " --> Number of triggers :  " << VPtAcqHead->Trigs.TrigNb << endl;
         
         fCurrentFrameNumber = (VGPtTrig->ATrig[fCurrentTriggerNumber])/100 + fFramesCounterInTrigger + fTriggerOffset;
         if (fDebugLevel > 1)
@@ -1467,6 +1495,7 @@ void BoardReaderMIMOSIS::DecodeFrame() {
     fFrameCount ++;
     
     NbFiredPixPerFrame[fCurrentFrameNumber] = 0;
+    
       if (fDebugLevel > 1)
        printf("Decoding Frame %d in Acquisition %d associated to trigger number %d from %d triggers\n", fCurrentFrameNumber, fCurrentAcqNumber, fCurrentTriggerNumber, fnbTrg);
        for ( int MSisId = 0; MSisId < fNSensors; MSisId++ ) {
@@ -1495,7 +1524,7 @@ void BoardReaderMIMOSIS::DecodeFrame() {
            */
            // Decode pixels only for frames with FiredPixNb > 0 and not truncated acquisition
                if (( APP_VGPtAcqDec->ResAAFrHead[MSisId][fCurrentFrameNumber].FiredPixNb > 0) && (isAcqSafe())) {
-            
+         //  if ( APP_VGPtAcqDec->ResAAFrHead[MSisId][fCurrentFrameNumber].FiredPixNb > 0) {
                    NbFiredPixPerFrame[fCurrentFrameNumber] += APP_VGPtAcqDec->ResAAFrHead[MSisId][fCurrentFrameNumber].FiredPixNb; // ZE 2021/10/10 Increment the number of fired pixels per frame
                            if (fDebugLevel > 3) {
                                        if (fCurrentFrameNumber >= APP_VGPtAcqDec->ResAFrNb[MSisId]) //ZE 2021/06/04 Check if frameID > nbFramesPerAcq
@@ -1507,11 +1536,10 @@ void BoardReaderMIMOSIS::DecodeFrame() {
                            for ( int ViPix = 0; ViPix < APP_VGPtAcqDec->ResAAFrHead[MSisId][fCurrentFrameNumber].FiredPixNb; ViPix++ ) {
                    
                                VPix = APP_VGPtAcqDec->ResAAAFrPix[MSisId][fCurrentFrameNumber][ViPix];
-                              /* if ( (fCurrentAcqNumber == 11) && (fCurrentFrameNumber > 448) && (fCurrentFrameNumber < 452))
-                                   printf("AcqID = %d - frameID = %d - SensorID = %d - Pixel [%.4d] : Y = %.4d - X  = %.4d \n ", fCurrentAcqNumber, fCurrentFrameNumber, MSisId + 1, ViPix, VPix.C.y, VPix.C.x);
-                               */
+                              
                                if (fDebugLevel > 3) {
-                                   printf(" Pixel [%.4d] : Y = %.4d - X  = %.4d - frameID = %d \n ", ViPix, VPix.C.y, VPix.C.x, fCurrentFrameNumber );
+                                //   printf(" Pixel [%.4d] : Y = %.4d - X  = %.4d - frameID = %d \n ", ViPix, VPix.C.y, VPix.C.x, fCurrentFrameNumber );
+                               printf(" Pixel [%.4d] : X  = %.4d - Y = %.4d  - frameID = %d \n ", ViPix, VPix.C.x, VPix.C.y, fCurrentFrameNumber );
                                }
                     
                                AddPixel( MSisId, 1, VPix.C.y ,VPix.C.x );
@@ -1522,7 +1550,6 @@ void BoardReaderMIMOSIS::DecodeFrame() {
            
            
            }// End of Loop over sensors
-    
     
     if (fTriggerMode == 0)
         fCurrentFrameNumber ++ ;
@@ -1543,10 +1570,10 @@ void BoardReaderMIMOSIS::DecodeFrame() {
         printf("Merging frame %d into frame %d \n", fCurrentFrameNumber, fCurrentFrameNumber - 1);
     }
         fNbMergedFrame ++;
-       if (fDebugLevel > 3) printf("Number of Merged Frames : %d \n",fNbMergedFrame);
+       if (fDebugLevel > 3)
+            printf("Number of Merged Frames : %d \n",fNbMergedFrame);
         DecodeFrame();
         
-
     }
     else
         fNbMergedFrame = 0;
